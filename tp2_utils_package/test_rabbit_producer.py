@@ -26,6 +26,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         self.recv_pipe, self.write_pipe = Pipe(False)
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         self.channel = self.connection.channel()
+        self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.queue_purge(CONSUME_QUEUE)
         self.test_process = None
         self.consume_process = Process(target=self._read_process, args=(self.write_pipe,))
