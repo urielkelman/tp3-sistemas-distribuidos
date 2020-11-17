@@ -1,0 +1,14 @@
+language: python
+services:
+  - docker
+python:
+  - 3.8
+before_install:
+  - docker-compose up -d -f docker-compose-test.yml
+  - python --version
+  - pip install -r requirements.txt
+  - pip install -r requirements-travis.txt
+  - export PYTHONPATH="${PYTHONPATH}:backup_server"
+script: pytest --cov=.
+after_success:
+  - coveralls
