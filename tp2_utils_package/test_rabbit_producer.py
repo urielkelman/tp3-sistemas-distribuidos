@@ -23,6 +23,12 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         channel.start_consuming()
 
     def setUp(self) -> None:
+        try:
+            from pytest_cov.embed import cleanup_on_sigterm
+        except ImportError:
+            pass
+        else:
+            cleanup_on_sigterm()
         self.recv_pipe, self.write_pipe = Pipe(False)
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         self.channel = self.connection.channel()

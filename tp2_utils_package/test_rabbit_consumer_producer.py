@@ -45,6 +45,12 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         channel.start_consuming()
 
     def setUp(self) -> None:
+        try:
+            from pytest_cov.embed import cleanup_on_sigterm
+        except ImportError:
+            pass
+        else:
+            cleanup_on_sigterm()
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
         os.mkdir('/tmp/message_set')
         self.message_set = DiskMessageSet('/tmp/message_set')
