@@ -1,4 +1,6 @@
+from typing import NoReturn
 from abc import abstractmethod
+
 
 class MessageSet:
 
@@ -7,5 +9,5 @@ class MessageSet:
         pass
 
     @abstractmethod
-    def add(self, item):
+    def add(self, item) -> NoReturn:
         pass

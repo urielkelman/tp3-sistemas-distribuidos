@@ -1,0 +1,2 @@
+class UnexistentField(KeyError):
+    pass

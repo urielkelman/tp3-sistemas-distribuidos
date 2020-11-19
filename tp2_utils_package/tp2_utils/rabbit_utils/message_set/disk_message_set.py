@@ -1,7 +1,8 @@
-import pyhash
-import pickle
-import os
 import base64
+import os
+import pickle
+
+import pyhash
 
 message = "Python is fun"
 message_bytes = message.encode('ascii')
@@ -19,6 +20,7 @@ LINE_BREAK = '\n'
 MAX_UNCOMMITED = 5000
 CONTAINS_CACHE_SIZE = 5000
 BUCKET_FILE_MAX_ITEMS = 5
+
 
 class DiskMessageSet(MessageSet):
     def _get_write_bucket_file(self, hash0):
@@ -52,7 +54,7 @@ class DiskMessageSet(MessageSet):
         file.flush()
         return file
 
-    def __init__(self, set_data_path: str, hash_mod: int=10000, number_of_hashes: int = 20):
+    def __init__(self, set_data_path: str, hash_mod: int = 10000, number_of_hashes: int = 20):
         self.set_data_path = set_data_path
         self.hasher = pyhash.murmur3_32()
         self.bucket_numbers = {}
@@ -95,7 +97,7 @@ class DiskMessageSet(MessageSet):
             self.log_uncommited = []
             # This dump could fail and it would be irrecoverable
             with open(SETS_PATH % self.set_data_path, "wb") as sets_file:
-                 pickle.dump((self.hashing_sets, self.bucket_numbers), sets_file)
+                pickle.dump((self.hashing_sets, self.bucket_numbers), sets_file)
             self.writeahead_log.write(COMMIT_LINE)
             self.writeahead_log.flush()
             self.writeahead_log.close()

@@ -1,9 +1,12 @@
-from typing import Callable, NoReturn, Any, Optional, Dict, List
 import json
 import logging
-import pika
 from functools import partial
-from rabbit_utils.message_set.message_set import MessageSet
+from typing import Callable, NoReturn, Optional, Dict, List
+
+import pika
+
+from .message_set.message_set import MessageSet
+
 
 class RabbitQueueConsumerProducer:
     """
@@ -35,7 +38,7 @@ class RabbitQueueConsumerProducer:
         except Exception:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.exception("Exception while consuming message")
-            ch.basic_nack(delivery_tag = method.delivery_tag)
+            ch.basic_nack(delivery_tag=method.delivery_tag)
             return
         try:
             if responses:
@@ -53,13 +56,12 @@ class RabbitQueueConsumerProducer:
         except Exception:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.exception("Exception while sending message")
-            ch.basic_nack(delivery_tag = method.delivery_tag)
+            ch.basic_nack(delivery_tag=method.delivery_tag)
             return
         if self.idempotency_set:
             for message in messages:
                 self.idempotency_set.add(json.dumps(message).encode())
-        ch.basic_ack(delivery_tag = method.delivery_tag)
-
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def __init__(self, host: str, consume_queue: str,
                  response_queue: str,

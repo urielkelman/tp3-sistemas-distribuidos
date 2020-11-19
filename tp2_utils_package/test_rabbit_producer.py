@@ -1,9 +1,11 @@
 import json
 import unittest
-from multiprocessing import Process, Pipe
 from functools import partial
+from multiprocessing import Process, Pipe
+
 import pika
-from rabbit_utils.rabbit_producer import RabbitQueueProducer
+
+from .tp2_utils.rabbit_utils.rabbit_producer import RabbitQueueProducer
 
 CONSUME_QUEUE = "consume_example"
 

@@ -1,13 +1,15 @@
 import json
-import unittest
-from multiprocessing import Process, Pipe
-from typing import Dict, List
-from functools import partial
 import os
 import shutil
+import unittest
+from functools import partial
+from multiprocessing import Process, Pipe
+from typing import Dict, List
+
 import pika
-from rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
-from rabbit_utils.message_set.disk_message_set import DiskMessageSet
+
+from tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
 CONSUME_QUEUE = "consume_example"
 RESPONSE_QUEUE = "response_example"
@@ -23,13 +25,13 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
     @staticmethod
     def publish_multiple(message: Dict) -> List[Dict]:
         if isinstance(message["value"], int) or isinstance(message["value"], float):
-            return [{"type": message["type"]}]*int(message["value"])
+            return [{"type": message["type"]}] * int(message["value"])
         return []
 
     def _start_process(self, func, messages_to_group=1, idempotency_set=None):
         RabbitQueueConsumerProducer("localhost", CONSUME_QUEUE, RESPONSE_QUEUE, func,
-                                    messages_to_group = messages_to_group,
-                                    idempotency_set = idempotency_set)()
+                                    messages_to_group=messages_to_group,
+                                    idempotency_set=idempotency_set)()
 
     @staticmethod
     def _read_process(write_pipe: Pipe):

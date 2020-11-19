@@ -1,9 +1,9 @@
-import unittest
 import os
-import shutil
 import random
-from multiprocessing import Process, Pipe
-from rabbit_utils.message_set.disk_message_set import DiskMessageSet
+import shutil
+import unittest
+
+from .tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
 
 
 class TestDiskMessageSet(unittest.TestCase):
@@ -78,10 +78,8 @@ class TestDiskMessageSet(unittest.TestCase):
             text = "%d" % i
             self.message_set.add(text.encode())
             if random.random() < 0.01:
-                query = "%d" % random.randint(0, i-1)
+                query = "%d" % random.randint(0, i - 1)
                 self.assertTrue(query.encode() in self.message_set)
             else:
                 query = "%d" % random.randint(i + 1, 100001)
                 self.assertFalse(query.encode() in self.message_set)
-
-

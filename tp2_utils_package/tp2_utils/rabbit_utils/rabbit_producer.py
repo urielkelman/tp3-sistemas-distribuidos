@@ -1,14 +1,15 @@
-from typing import Optional, Dict
 import json
 import logging
+from typing import Optional, Dict
+
 import pika
+
 
 class RabbitQueueProducer:
     """
     Rabbit producer
     """
     logger: logging.Logger = None
-
 
     def __init__(self, host: str, publish_queue: str,
                  logger: Optional[logging.Logger] = None):
