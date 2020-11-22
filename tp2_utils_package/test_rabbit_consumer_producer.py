@@ -4,7 +4,7 @@ import shutil
 import unittest
 from functools import partial
 from multiprocessing import Process, Pipe
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import pika
 
@@ -17,19 +17,26 @@ RESPONSE_QUEUE = "response_example"
 
 class TestRabbitQueueConsumerProducer(unittest.TestCase):
     @staticmethod
-    def consume_filter(message: Dict) -> List[Dict]:
+    def consume_filter(message: Dict) -> Tuple[List[Dict], bool]:
         if message["type"] == "A":
-            return [message]
-        return []
+            return [message], False
+        return [], False
 
     @staticmethod
-    def publish_multiple(message: Dict) -> List[Dict]:
+    def publish_multiple(message: Dict) -> Tuple[List[Dict], bool]:
         if isinstance(message["value"], int) or isinstance(message["value"], float):
-            return [{"type": message["type"]}] * int(message["value"])
-        return []
+            return [{"type": message["type"]}] * int(message["value"]), False
+        return [], False
+
+    @staticmethod
+    def republish_and_stop_with_key_z(message: Dict) -> Tuple[List[Dict], bool]:
+        if message['key'] != 'Z':
+            return [message], False
+        else:
+            return [message], True
 
     def _start_process(self, func, messages_to_group=1, idempotency_set=None):
-        RabbitQueueConsumerProducer("localhost", CONSUME_QUEUE, RESPONSE_QUEUE, func,
+        RabbitQueueConsumerProducer("localhost", CONSUME_QUEUE, [RESPONSE_QUEUE], func,
                                     messages_to_group=messages_to_group,
                                     idempotency_set=idempotency_set)()
 
@@ -188,3 +195,22 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         self.assertEqual(processed_data[5], [{"type": "B"}])
         self.assertEqual(processed_data[6], [{"type": "D"}])
         self.assertEqual(processed_data[7], [{"type": "V"}])
+
+    def test_simple_stop(self):
+        self.test_process = Process(target=self._start_process,
+                                    args=(self.republish_and_stop_with_key_z, 2, self.message_set))
+        self.test_process.start()
+        self.channel.queue_declare(queue=CONSUME_QUEUE)
+        self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
+                                   body=json.dumps({"key": "A", "value": 4.2}))
+        self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
+                                   body=json.dumps({"key": "Z", "value": 7}))
+        self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
+                                   body=json.dumps({"key": "C", "value": "a"}))
+        self.test_process.join()
+        processed_data = []
+        for _ in range(2):
+            processed_data.append(json.loads(self.recv_pipe.recv()))
+        self.assertFalse(self.recv_pipe.poll(1))
+        self.assertEqual(processed_data[0], [{"key": "A", "value": 4.2}])
+        self.assertEqual(processed_data[1], [{"key": "Z", "value": 7}])

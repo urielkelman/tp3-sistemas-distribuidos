@@ -1,0 +1,22 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_reviews_histogram_consumer
+  produce_to:
+    - yelp_reviews_histogram_finished
+  messages_to_group: 100
+
+group_aggregates:
+  - name: DayCount
+    type: Count
+    args: {}
+
+operations:
+  - name: GroupByDay
+    type: GroupBy
+    args:
+      group_by: day
+      aggregates:
+        - DayCount
+
+message_pipeline:
+  - GroupByDay

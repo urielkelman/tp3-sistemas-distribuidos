@@ -1,0 +1,28 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_reviews_funny_counter_consumer
+  produce_to:
+    - yelp_business_funy_reviews_count
+  messages_to_group: 100
+
+group_aggregates:
+  - name: ReviewCount
+    type: Count
+    args: {}
+
+operations:
+  - name: IsFunny
+    type: Filter
+    args:
+      filter_by: funny
+      keep_cond: is_1
+  - name: GroupByBusiness
+    type: GroupBy
+    args:
+      group_by: business_id
+      aggregates:
+        - ReviewCount
+
+message_pipeline:
+  - IsFunny
+  - GroupByBusiness

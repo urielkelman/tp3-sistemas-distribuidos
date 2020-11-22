@@ -20,5 +20,5 @@ class Operation:
         :param name: the name of the type to instantiate
         :return: a Operation object
         """
-        types = {cls.__name__:cls for cls in Operation.__subclasses__()}
+        types = {cls.__name__: cls for cls in Operation.__subclasses__()}
         return types[name](*args, **kwargs)

@@ -1,0 +1,34 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_reviews_user_stats_consumer_shard1
+  produce_to:
+    - yelp_user_stats_condition1
+    - yelp_user_stats_condition2
+    - yelp_user_stats_condition3
+  messages_to_group: 100
+
+group_aggregates:
+  - name: ReviewCount
+    type: Count
+    args: {}
+  - name: MeanStars
+    type: Mean
+    args:
+      mean_value: stars
+  - name: TextUnique
+    type: ValueUnique
+    args:
+      value_name: text
+
+operations:
+  - name: GroupByUser
+    type: GroupBy
+    args:
+      group_by: user_id
+      aggregates:
+        - ReviewCount
+        - MeanStars
+        - TextUnique
+
+message_pipeline:
+  - GroupByUser

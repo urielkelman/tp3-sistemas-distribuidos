@@ -1,6 +1,7 @@
 from typing import Dict, NoReturn, Any
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 
+
 class Count(GroupAggregate):
     def __init__(self, count_name: str = 'count'):
         """
@@ -28,5 +29,3 @@ class Count(GroupAggregate):
         :return: the dict with the group value as key and a dict of statistics
         """
         return {k: {self.count_name: v} for k, v in self.count_by_key.items()}
-
-

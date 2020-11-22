@@ -1,0 +1,34 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_user_stats_condition2
+  produce_to:
+    - yelp_users_50_or_more_reviews_and_5_stars
+  messages_to_group: 100
+
+group_aggregates: []
+
+operations:
+  - name: LeqThan50Reviews
+    type: Filter
+    args:
+      filter_by: count
+      keep_cond: leq_than_50
+  - name: Always5Stars
+    type: Filter
+    args:
+      filter_by: stars_mean
+      keep_cond: equal_to_5
+  - name: UserProjector
+    type: Project
+    args:
+      attributes:
+        - user_id
+
+message_pipeline:
+  - LeqThan50Reviews
+  - Always5Stars
+  - UserProjector
+
+message_pipeline_kwargs:
+  ends_to_receive: 3
+  ends_to_send: 1

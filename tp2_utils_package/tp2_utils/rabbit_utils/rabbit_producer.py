@@ -27,5 +27,6 @@ class RabbitQueueProducer:
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue=publish_queue)
 
-    def publish(self, item: Dict):
+    def publish(self, item):
         self.channel.basic_publish(exchange='', routing_key=self.publish_queue, body=json.dumps(item).encode())
+

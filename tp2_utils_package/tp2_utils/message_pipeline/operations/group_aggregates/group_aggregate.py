@@ -1,6 +1,7 @@
 from typing import Dict, NoReturn, Any
 from abc import abstractmethod
 
+
 class GroupAggregate:
     @abstractmethod
     def add(self, key: str, values: Dict) -> NoReturn:
@@ -27,5 +28,5 @@ class GroupAggregate:
         :param name: the name of the type to instantiate
         :return: a GroupAggregate object
         """
-        types = {cls.__name__:cls for cls in GroupAggregate.__subclasses__()}
+        types = {cls.__name__: cls for cls in GroupAggregate.__subclasses__()}
         return types[name](*args, **kwargs)

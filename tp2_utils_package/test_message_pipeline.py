@@ -2,6 +2,9 @@ import unittest
 
 from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
 from tp2_utils.message_pipeline.operations.filter import Filter
+from tp2_utils.message_pipeline.operations.transform import Transform
+from tp2_utils.message_pipeline.operations.project import Project
+from tp2_utils.message_pipeline.operations.rename import Rename
 from tp2_utils.message_pipeline.operations.group_aggregates.count import Count
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.group_aggregates.mean import Mean
@@ -10,6 +13,7 @@ from tp2_utils.message_pipeline.operations.group_aggregates.value_unique import 
 from tp2_utils.message_pipeline.operations.group_by import GroupBy
 from tp2_utils.message_pipeline.operations.operation import Operation
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
+from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 
 
 class TestDiskMessagePipeline(unittest.TestCase):
@@ -29,6 +33,52 @@ class TestDiskMessagePipeline(unittest.TestCase):
     def test_filter_end(self):
         filter_op = Filter(filter_by="value", keep_cond=lambda x: False)
         self.assertEqual(filter_op.process(WINDOW_END_MESSAGE), [WINDOW_END_MESSAGE])
+
+    def test_simple_transform(self):
+        transform_op = Transform(attribute_name="value", transform_func=lambda x: x * 2)
+        self.assertEqual(transform_op.process({"value": 2}), [{"value": 4}])
+        self.assertEqual(transform_op.process({"value": 1}), [{"value": 2}])
+        self.assertEqual(transform_op.process({"key": "A", "value": 2}), [{"key": "A", "value": 4}])
+        self.assertEqual(transform_op.process({"key": "A", "value": 0}), [{"key": "A", "value": 0}])
+
+    def test_transform_unexistent_field(self):
+        transform_op = Transform(attribute_name="value", transform_func=lambda x: x * 2)
+        with self.assertRaises(UnexistentField):
+            transform_op.process({"key": "A"})
+
+    def test_transform_end(self):
+        transform_op = Filter(filter_by="value", keep_cond=lambda x: False)
+        self.assertEqual(transform_op.process(WINDOW_END_MESSAGE), [WINDOW_END_MESSAGE])
+
+    def test_simple_project(self):
+        project_op = Project(["text", "value"])
+        self.assertEqual(project_op.process({"value": 2, "text": "asd"}), [{"value": 2, "text": "asd"}])
+        self.assertEqual(project_op.process({"key": "A", "value": 0, "text": "asd"}),
+                         [{"value": 0, "text": "asd"}])
+
+    def test_project_unexistent_field(self):
+        project_op = Project(["text", "value"])
+        with self.assertRaises(UnexistentField):
+            project_op.process({"key": "A", "value": 2})
+
+    def test_project_end(self):
+        project_op = Project(["text", "value"])
+        self.assertEqual(project_op.process(WINDOW_END_MESSAGE), [WINDOW_END_MESSAGE])
+
+    def test_simple_rename(self):
+        rename_op = Rename({"text": "comment", "value": "rating"})
+        self.assertEqual(rename_op.process({"value": 2, "text": "asd"}), [{"rating": 2, "comment": "asd"}])
+        self.assertEqual(rename_op.process({"key": "A", "value": 0, "text": "asd"}),
+                         [{"key": "A", "rating": 0, "comment": "asd"}])
+
+    def test_rename_unexistent_field(self):
+        rename_op = Rename({"text": "comment", "value": "rating"})
+        with self.assertRaises(UnexistentField):
+            rename_op.process({"key": "A", "value": 2})
+
+    def test_rename_end(self):
+        rename_op = Rename({"text": "comment", "value": "rating"})
+        self.assertEqual(rename_op.process(WINDOW_END_MESSAGE), [WINDOW_END_MESSAGE])
 
     def test_simple_groupby_count(self):
         group_op = GroupBy(group_by='key', aggregates=[Count()])
@@ -103,19 +153,61 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                     GroupAggregate.factory("Mean", "time"),
                                 ]),
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)])
-        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), [])
-        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), [])
-        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), [])
-        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), [])
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), [])
-        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), [])
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), [])
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), [])
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), [])
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), [])
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), [])
-        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), [])
+        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
         self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
-                         [{"key": "B", "count": 4,"value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
-                          {"key": "C", "count": 1,"value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
-                          WINDOW_END_MESSAGE])
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                          {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                          BroadcastMessage(WINDOW_END_MESSAGE)], True))
+
+    def test_complex_pipeline_multiple_ends(self):
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               ends_to_receive=2, ends_to_send=2)
+        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                          {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                          BroadcastMessage(WINDOW_END_MESSAGE), BroadcastMessage(WINDOW_END_MESSAGE)], True))
+
+    def test_pipeline_ends(self):
+        pipe = MessagePipeline([],
+                               ends_to_receive=3, ends_to_send=1)
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+                         ([BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe = MessagePipeline([],
+                               ends_to_receive=1, ends_to_send=3)
+        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+                         ([BroadcastMessage(WINDOW_END_MESSAGE),
+                           BroadcastMessage(WINDOW_END_MESSAGE),
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))

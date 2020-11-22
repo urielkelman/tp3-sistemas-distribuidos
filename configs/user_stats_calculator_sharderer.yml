@@ -1,0 +1,25 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_reviews_user_stats_consumer
+  produce_to:
+    - yelp_reviews_user_stats_consumer
+  messages_to_group: 1000
+
+publisher_sharding:
+  by_key: user_id
+  shards: 3
+
+group_aggregates: []
+
+operations:
+  - name: UserStatsProjector
+    type: Project
+    args:
+      attributes:
+        - user_id
+        - review_id
+        - stars
+        - text
+
+message_pipeline:
+  - UserStatsProjector

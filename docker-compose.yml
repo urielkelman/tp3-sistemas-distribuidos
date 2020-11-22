@@ -1,11 +1,173 @@
 version: "3"
 services:
   rabbitmq:
+    container_name: rabbit
     image: "rabbitmq:3-management"
     ports:
       - "5672:5672"
       - "15672:15672"
     volumes:
       - "rabbitmq_data:/data"
+    networks:
+      - tp2_net
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  json_producer_script:
+    container_name: json_producer_script
+    image: json_producer_script:latest
+    entrypoint: python3 /__main__.py
+    networks:
+      - tp2_net
+    volumes:
+      - ./data:/data
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  initial_review_consumer:
+    container_name: initial_review_consumer
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/reviews_initial_consumer.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  day_histogram_calculator:
+    container_name: day_histogram_calculator
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/day_histogram_calculator.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_calculator_sharderer:
+    container_name: user_stats_calculator_sharderer
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_calculator_sharderer.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_calculator_shard1:
+    container_name: user_stats_calculator_shard1
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_calculator_shard1.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_calculator_shard2:
+    container_name: user_stats_calculator_shard2
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_calculator_shard2.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_calculator_shard3:
+    container_name: user_stats_calculator_shard3
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_calculator_shard3.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_filter_5_and_unique_text:
+    container_name: user_stats_filter_5_and_unique_text
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_filter_5_and_unique_text.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_filter_50:
+    container_name: user_stats_filter_50
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_filter_50.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  user_stats_filter_50_and_5_stars:
+    container_name: user_stats_filter_50_and_5_stars
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/user_stats_filter_50_and_5_stars.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  reviews_funny_counter:
+    container_name: reviews_funny_counter
+    image: consumer_producer_service:latest
+    entrypoint: python3 /__main__.py --config /configs/reviews_funny_counter.yml
+    networks:
+      - tp2_net
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  business_download_service:
+    container_name: business_download_service
+    image: business_download_service:latest
+    entrypoint: python3 /__main__.py
+    environment:
+      - PORT=2222
+      - LISTEN_BACKLOG=3
+    networks:
+      - tp2_net
+    volumes:
+      - ./download_service_data:/data
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
 volumes:
   rabbitmq_data:
+networks:
+  tp2_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24

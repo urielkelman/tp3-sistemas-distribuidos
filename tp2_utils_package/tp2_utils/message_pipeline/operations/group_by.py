@@ -42,7 +42,5 @@ class GroupBy(Operation):
             for k, v in results.items():
                 v[self.group_by] = k
                 response.append(v)
-            response.append({})
+            response.append(WINDOW_END_MESSAGE)
             return response
-
-

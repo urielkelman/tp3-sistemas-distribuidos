@@ -1,0 +1,38 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_reviews_news
+  produce_to:
+    - yelp_reviews_histogram_consumer
+    - yelp_reviews_funny_counter_consumer
+    - yelp_reviews_user_stats_consumer
+  messages_to_group: 1000
+
+group_aggregates: []
+
+operations:
+  - name: InitialProjector
+    type: Project
+    args:
+      attributes:
+        - business_id
+        - user_id
+        - review_id
+        - stars
+        - funny
+        - text
+        - date
+  - name: DateToWeekday
+    type: Transform
+    args:
+      attribute_name: date
+      transform_func: date_to_weekday
+  - name: DateColumnRename
+    type: Rename
+    args:
+      attr_renames:
+        date: day
+
+message_pipeline:
+  - InitialProjector
+  - DateToWeekday
+  - DateColumnRename
