@@ -11,6 +11,7 @@ from tp2_utils.message_pipeline.operations.group_aggregates.mean import Mean
 from tp2_utils.message_pipeline.operations.group_aggregates.sum import Sum
 from tp2_utils.message_pipeline.operations.group_aggregates.value_unique import ValueUnique
 from tp2_utils.message_pipeline.operations.group_by import GroupBy
+from tp2_utils.message_pipeline.operations.top_n import TopN
 from tp2_utils.message_pipeline.operations.operation import Operation
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
@@ -79,6 +80,24 @@ class TestDiskMessagePipeline(unittest.TestCase):
     def test_rename_end(self):
         rename_op = Rename({"text": "comment", "value": "rating"})
         self.assertEqual(rename_op.process(WINDOW_END_MESSAGE), [WINDOW_END_MESSAGE])
+
+    def test_simple_topn(self):
+        top_op = TopN(top_key='key', value_name='value', n=3)
+        self.assertEqual(top_op.process({"key": "A", "value": 2}), [])
+        self.assertEqual(top_op.process({"key": "D", "value": 0}), [])
+        self.assertEqual(top_op.process({"key": "B", "value": 4}), [])
+        self.assertEqual(top_op.process({"key": "C", "value": 3}), [])
+        self.assertEqual(top_op.process(WINDOW_END_MESSAGE), [{"key": "B", "value": 4},
+                                                              {"key": "C", "value": 3},
+                                                              {"key": "A", "value": 2},
+                                                              WINDOW_END_MESSAGE])
+    def test_topn_unexistent_key(self):
+        top_op = TopN(top_key='key', value_name='value', n=3)
+        self.assertEqual(top_op.process({"key": "A", "value": 2}), [])
+        with self.assertRaises(UnexistentField):
+            top_op.process({"value": 2})
+        with self.assertRaises(UnexistentField):
+            top_op.process({"key": "A"})
 
     def test_simple_groupby_count(self):
         group_op = GroupBy(group_by='key', aggregates=[Count()])

@@ -30,3 +30,6 @@ class RabbitQueueProducer:
     def publish(self, item):
         self.channel.basic_publish(exchange='', routing_key=self.publish_queue, body=json.dumps(item).encode())
 
+    def close(self):
+        self.connection.close()
+

@@ -36,6 +36,7 @@ with open(BUSINESSES_JSON_PATH) as json_file:
         producer.publish(buffer)
 
 producer.publish(WINDOW_END_MESSAGE)
+producer.close()
 print("End publishing of businesses")
 
 print("Start publishing of reviews")
@@ -58,6 +59,7 @@ with open(REVIEWS_JSON_PATH) as json_file:
         producer.publish(buffer)
 
 producer.publish(WINDOW_END_MESSAGE)
+producer.close()
 print("End publishing of reviews")
 
 class DataGatherer:

@@ -79,6 +79,7 @@ class RabbitQueueConsumerProducer:
         ch.basic_ack(delivery_tag=method.delivery_tag)
         if stop_consumer:
             ch.stop_consuming()
+            self.connection.close()
 
     def _obj_to_bytes(self, obj):
         if isinstance(obj, BroadcastMessage):

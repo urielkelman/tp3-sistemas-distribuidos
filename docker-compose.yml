@@ -163,6 +163,24 @@ services:
       - rabbitmq
     restart: on-failure
 
+  business_joiner_service:
+    image: business_joiner_service:latest
+    entrypoint: python3 /__main__.py
+    environment:
+      - DOWNLOADER_HOST=business_download_service
+      - DOWNLOADER_PORT=2222
+      - JOIN_FROM_QUEUE=yelp_business_funny_reviews_count
+      - OUTPUT_JOINED_QUEUE=yelp_business_funny_reviews_city_count
+    networks:
+      - tp2_net
+    volumes:
+      - ./download_service_data:/data
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    deploy:
+      replicas: 2
+
 volumes:
   rabbitmq_data:
 networks:

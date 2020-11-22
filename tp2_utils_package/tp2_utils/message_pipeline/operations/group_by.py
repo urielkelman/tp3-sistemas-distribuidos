@@ -9,7 +9,7 @@ from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate impo
 class GroupBy(Operation):
     def __init__(self, group_by: str, aggregates: List[GroupAggregate]):
         """
-        Creates a filter operation
+        Creates a group by operation
 
         :param group_by: the field to use for grouping
         :param aggregates: the aggregates to compute

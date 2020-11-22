@@ -2,7 +2,7 @@ rabbit_params:
   host: rabbit
   consume_from: yelp_reviews_funny_counter_consumer
   produce_to:
-    - yelp_business_funy_reviews_count
+    - yelp_business_funny_reviews_count
   messages_to_group: 100
 
 group_aggregates:
@@ -26,3 +26,7 @@ operations:
 message_pipeline:
   - IsFunny
   - GroupByBusiness
+
+message_pipeline_kwargs:
+  ends_to_receive: 1
+  ends_to_send: 2

@@ -8,7 +8,6 @@ import pickle
 
 BUSINESSES_QUEUE = 'yelp_businesses_news'
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
-BUSINESS_ASK_FOR_READY = 'notify_business_query_end'
 PATH_TO_SAVE_BUSINESSES = "data/businesses.pickle"
 
 port = int(os.getenv('PORT'))
@@ -18,6 +17,7 @@ class SocketDataDownloader():
     def __init__(self, port, listen_backlog):
         self.port = port
         self.listen_backlog = listen_backlog
+        self.process_list = []
 
     def open_socket_for_download(self):
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,12 +71,12 @@ class DataGatherer:
 
     def gather_business_locations(self, item):
         if item == WINDOW_END_MESSAGE:
-            with open(PATH_TO_SAVE_BUSINESSES, 'wb') as business_path:
-                pickle.dump(self.business_locations, business_path)
+            with open(PATH_TO_SAVE_BUSINESSES, 'wb') as business_file:
+                pickle.dump(self.business_locations, business_file)
             return [WINDOW_END_MESSAGE], True
         else:
             self.business_locations[item['business_id']] = item['city']
-            return [], False
+        return [], False
 
 def notify_data_available(item):
     if item == WINDOW_END_MESSAGE:
@@ -85,18 +85,14 @@ def notify_data_available(item):
 
 cp = RabbitQueueConsumerProducer("rabbit", BUSINESSES_QUEUE,
                                  [BUSINESS_NOTIFY_END],
-                                 DataGatherer.gather_business_locations,
+                                 DataGatherer().gather_business_locations,
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()
 p.join()
 
-cp = RabbitQueueConsumerProducer("rabbit", BUSINESS_ASK_FOR_READY,
-                                 [BUSINESS_NOTIFY_END],
-                                 DataGatherer.gather_business_locations,
-                                 messages_to_group=1)
-p = Process(target=cp)
-p.start()
+print("Starting download service")
 
 SocketDataDownloader(port, listen_backlog).open_socket_for_download()
+p.terminate()
 
