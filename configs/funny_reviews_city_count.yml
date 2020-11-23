@@ -1,0 +1,28 @@
+rabbit_params:
+  host: rabbit
+  consume_from: yelp_business_funny_reviews_city_count_consumer
+  produce_to:
+    - yelp_business_city_funny_count
+  messages_to_group: 100
+
+group_aggregates:
+  - name: SumCount
+    type: Sum
+    args:
+      sum_value: count
+      sum_suffix: ''
+
+operations:
+  - name: GroupByCity
+    type: GroupBy
+    args:
+      group_by: city
+      aggregates:
+        - SumCount
+
+message_pipeline:
+  - GroupByCity
+
+message_pipeline_kwargs:
+  ends_to_receive: 2
+  ends_to_send: 1

@@ -1,9 +1,9 @@
-from typing import Dict, List, Callable, Any
+from typing import Dict, List
 
-from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
-from tp2_utils.message_pipeline.operations.operation import Operation
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
+from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
+from tp2_utils.message_pipeline.operations.operation import Operation
 
 
 class GroupBy(Operation):

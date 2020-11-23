@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional, Dict
+from typing import Optional
 
 import pika
 
@@ -32,4 +32,3 @@ class RabbitQueueProducer:
 
     def close(self):
         self.connection.close()
-

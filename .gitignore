@@ -131,5 +131,6 @@ dmypy.json
 
 *.idea
 
-data/*
+client_script/*.json
+client_script/*.txt
 download_service_data/*

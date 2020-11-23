@@ -1,5 +1,5 @@
-from typing import NoReturn
 from abc import abstractmethod
+from typing import NoReturn
 
 
 class MessageSet:

@@ -1,6 +1,7 @@
 from typing import Dict, NoReturn, Any
-from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
+
 from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
+from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 
 
 class Sum(GroupAggregate):

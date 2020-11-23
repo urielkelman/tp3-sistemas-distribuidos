@@ -1,19 +1,19 @@
 import unittest
 
+from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
 from tp2_utils.message_pipeline.operations.filter import Filter
-from tp2_utils.message_pipeline.operations.transform import Transform
-from tp2_utils.message_pipeline.operations.project import Project
-from tp2_utils.message_pipeline.operations.rename import Rename
 from tp2_utils.message_pipeline.operations.group_aggregates.count import Count
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.group_aggregates.mean import Mean
 from tp2_utils.message_pipeline.operations.group_aggregates.sum import Sum
 from tp2_utils.message_pipeline.operations.group_aggregates.value_unique import ValueUnique
 from tp2_utils.message_pipeline.operations.group_by import GroupBy
-from tp2_utils.message_pipeline.operations.top_n import TopN
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
+from tp2_utils.message_pipeline.operations.project import Project
+from tp2_utils.message_pipeline.operations.rename import Rename
+from tp2_utils.message_pipeline.operations.top_n import TopN
+from tp2_utils.message_pipeline.operations.transform import Transform
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 
 
@@ -91,6 +91,7 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                                               {"key": "C", "value": 3},
                                                               {"key": "A", "value": 2},
                                                               WINDOW_END_MESSAGE])
+
     def test_topn_unexistent_key(self):
         top_op = TopN(top_key='key', value_name='value', n=3)
         self.assertEqual(top_op.process({"key": "A", "value": 2}), [])
@@ -186,8 +187,8 @@ class TestDiskMessagePipeline(unittest.TestCase):
         self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
         self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
-                          {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
-                          BroadcastMessage(WINDOW_END_MESSAGE)], True))
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
 
     def test_complex_pipeline_multiple_ends(self):
         pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
@@ -214,8 +215,8 @@ class TestDiskMessagePipeline(unittest.TestCase):
         self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
         self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
-                          {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
-                          BroadcastMessage(WINDOW_END_MESSAGE), BroadcastMessage(WINDOW_END_MESSAGE)], True))
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE), BroadcastMessage(WINDOW_END_MESSAGE)], True))
 
     def test_pipeline_ends(self):
         pipe = MessagePipeline([],

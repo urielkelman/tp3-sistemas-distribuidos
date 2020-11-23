@@ -15,7 +15,7 @@ operations:
     type: Filter
     args:
       filter_by: funny
-      keep_cond: is_1
+      keep_cond: leq_than_1
   - name: GroupByBusiness
     type: GroupBy
     args:

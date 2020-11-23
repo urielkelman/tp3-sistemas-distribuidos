@@ -1,5 +1,5 @@
-from typing import Dict, NoReturn, Any
 from abc import abstractmethod
+from typing import Dict, NoReturn, Any
 
 
 class GroupAggregate:

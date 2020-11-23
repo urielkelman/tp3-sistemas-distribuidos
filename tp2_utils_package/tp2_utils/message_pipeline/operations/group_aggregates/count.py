@@ -1,4 +1,5 @@
 from typing import Dict, NoReturn, Any
+
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 
 

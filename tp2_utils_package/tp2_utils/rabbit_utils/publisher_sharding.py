@@ -1,6 +1,9 @@
 from typing import List
-from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+
 import pyhash
+
+from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+
 
 class PublisherSharding:
     def __init__(self, by_key: str, shards: int):

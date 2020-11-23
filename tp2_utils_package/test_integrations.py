@@ -4,26 +4,22 @@ import shutil
 import unittest
 from functools import partial
 from multiprocessing import Process, Pipe
-from typing import Dict, List, Tuple
 
 import pika
-import random
 
-from tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
-from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
+from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
+from tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
-
+from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
 DEFAULT_MESSAGES_TO_GROUP = 5
 
-
 MESSAGES_FOR_TESTING_ENDING_1 = [
-    {'key': 'A', '_id':0},
-    {'key': 'A', '_id':0},
-    {'key': 'A', '_id':1},
+    {'key': 'A', '_id': 0},
+    {'key': 'A', '_id': 0},
+    {'key': 'A', '_id': 1},
     [{'key': 'B', '_id': 2}, {'key': 'C', '_id': 3}],
     [{'key': 'B', '_id': 4}, {'key': 'D', '_id': 5}],
     [{'key': 'D', '_id': 6}, {'key': 'C', '_id': 7}],
@@ -39,17 +35,17 @@ MESSAGES_FOR_TESTING_ENDING_1 = [
     {'key': 'G', '_id': 24},
     {'key': 'G', '_id': 25},
     {'key': 'G', '_id': 26},
-    [{'key': 'H', '_id': 26},{'key': 'H', '_id': 27},{'key': 'H', '_id': 28},
-     {'key': 'H', '_id': 29},{'key': 'H', '_id': 30},{'key': 'H', '_id': 31}],
-    [{'key': 'I', '_id': 32},{'key': 'J', '_id': 33},{'key': 'K', '_id': 34},
-     {'key': 'L', '_id': 35},{'key': 'M', '_id': 36}],
+    [{'key': 'H', '_id': 26}, {'key': 'H', '_id': 27}, {'key': 'H', '_id': 28},
+     {'key': 'H', '_id': 29}, {'key': 'H', '_id': 30}, {'key': 'H', '_id': 31}],
+    [{'key': 'I', '_id': 32}, {'key': 'J', '_id': 33}, {'key': 'K', '_id': 34},
+     {'key': 'L', '_id': 35}, {'key': 'M', '_id': 36}],
     WINDOW_END_MESSAGE
 ]
 
 MESSAGES_FOR_TESTING_ENDING_2 = [
-    {'key': 'A', '_id':0},
-    {'key': 'A', '_id':0},
-    {'key': 'A', '_id':1},
+    {'key': 'A', '_id': 0},
+    {'key': 'A', '_id': 0},
+    {'key': 'A', '_id': 1},
     [{'key': 'B', '_id': 2}, {'key': 'C', '_id': 3}],
     [{'key': 'B', '_id': 4}, {'key': 'D', '_id': 5}],
     [{'key': 'D', '_id': 6}, {'key': 'C', '_id': 7}],
@@ -65,10 +61,10 @@ MESSAGES_FOR_TESTING_ENDING_2 = [
     {'key': 'G', '_id': 24},
     {'key': 'G', '_id': 25},
     {'key': 'G', '_id': 26},
-    [{'key': 'H', '_id': 26},{'key': 'H', '_id': 27},{'key': 'H', '_id': 28},
-     {'key': 'H', '_id': 29},{'key': 'H', '_id': 30},{'key': 'H', '_id': 31}],
-    [{'key': 'I', '_id': 32},{'key': 'J', '_id': 33},{'key': 'K', '_id': 34},
-     {'key': 'L', '_id': 35},{'key': 'M', '_id': 36}, WINDOW_END_MESSAGE]
+    [{'key': 'H', '_id': 26}, {'key': 'H', '_id': 27}, {'key': 'H', '_id': 28},
+     {'key': 'H', '_id': 29}, {'key': 'H', '_id': 30}, {'key': 'H', '_id': 31}],
+    [{'key': 'I', '_id': 32}, {'key': 'J', '_id': 33}, {'key': 'K', '_id': 34},
+     {'key': 'L', '_id': 35}, {'key': 'M', '_id': 36}, WINDOW_END_MESSAGE]
 ]
 
 TESTING_RESULT = {'B': 6, 'C': 6, 'D': 6, 'G': 3, 'H': 6}
@@ -118,65 +114,65 @@ class TestIntegrations(unittest.TestCase):
     def _setup_pipelineA(self):
         message_set = self._setup_message_set('/tmp/message_set1')
         pipe = MessagePipeline([],
-                                ends_to_receive=1, ends_to_send=3)
+                               ends_to_receive=1, ends_to_send=3)
         self._setup_queue('pipelineA_step1_queue1')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
-                                        ['pipelineA_step1_queue1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineA_step1_queue1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
         # 3 consumers that group and count
         self._setup_queue('pipelineA_step2_queue1')
 
         message_set = self._setup_message_set('/tmp/message_set2')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
-                                        ['pipelineA_step2_queue1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineA_step2_queue1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         message_set = self._setup_message_set('/tmp/message_set3')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
-                                        ['pipelineA_step2_queue1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineA_step2_queue1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         message_set = self._setup_message_set('/tmp/message_set4')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
-                                        ['pipelineA_step2_queue1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineA_step2_queue1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         # receive and sum counts
         self._setup_queue('pipelineA_step3_queue1')
 
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Sum", "count"),
-                                ]),
+            GroupAggregate.factory("Sum", "count"),
+        ]),
                                 Operation.factory('Rename', {"count_sum": "count"})],
                                ends_to_receive=3, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step2_queue1',
-                                        ['pipelineA_step3_queue1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
+                                         ['pipelineA_step3_queue1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
         # final filter
@@ -187,10 +183,10 @@ class TestIntegrations(unittest.TestCase):
         pipe = MessagePipeline([Operation.factory("Filter", "count", lambda x: x > 2)],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step3_queue1',
-                                        ['pipelineA_result'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineA_result'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
     def _setup_pipelineB(self):
@@ -200,10 +196,10 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineB_step1_shard1')
         self._setup_queue('pipelineB_step1_shard2')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
-                                        ['pipelineB_step1'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set,
+                                         ['pipelineB_step1'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set,
                                          publisher_sharding=PublisherSharding(by_key='key',
                                                                               shards=3))
         self._setup_start_process(cp)
@@ -212,38 +208,38 @@ class TestIntegrations(unittest.TestCase):
 
         message_set = self._setup_message_set('/tmp/message_set2')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard0',
-                                        ['pipelineB_step2'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineB_step2'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         message_set = self._setup_message_set('/tmp/message_set3')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard1',
-                                        ['pipelineB_step2'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineB_step2'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         message_set = self._setup_message_set('/tmp/message_set4')
         pipe = MessagePipeline([Operation.factory("GroupBy", group_by="key", aggregates=[
-                                    GroupAggregate.factory("Count"),
-                                ])],
+            GroupAggregate.factory("Count"),
+        ])],
                                ends_to_receive=1, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard2',
-                                        ['pipelineB_step2'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineB_step2'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
         # filter
@@ -253,10 +249,10 @@ class TestIntegrations(unittest.TestCase):
         pipe = MessagePipeline([Operation.factory("Filter", "count", lambda x: x > 2)],
                                ends_to_receive=3, ends_to_send=1)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step2',
-                                        ['pipelineB_result'],
-                                        pipe.process,
-                                        messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
-                                        idempotency_set=message_set)
+                                         ['pipelineB_result'],
+                                         pipe.process,
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
+                                         idempotency_set=message_set)
         self._setup_start_process(cp)
 
     def setUp(self) -> None:
@@ -283,7 +279,7 @@ class TestIntegrations(unittest.TestCase):
     def test_count_pipeline_A_ending_1(self):
         self._setup_pipelineA()
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
-                                                                        'pipelineA_result'))
+                                                                   'pipelineA_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_1:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
@@ -306,7 +302,7 @@ class TestIntegrations(unittest.TestCase):
     def test_count_pipeline_A_ending_2(self):
         self._setup_pipelineA()
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
-                                                                        'pipelineA_result'))
+                                                                   'pipelineA_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_2:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
@@ -329,7 +325,7 @@ class TestIntegrations(unittest.TestCase):
     def test_count_pipeline_B_ending_1(self):
         self._setup_pipelineB()
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
-                                                                        'pipelineB_result'))
+                                                                   'pipelineB_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_1:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
@@ -352,7 +348,7 @@ class TestIntegrations(unittest.TestCase):
     def test_count_pipeline_B_ending_2(self):
         self._setup_pipelineB()
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
-                                                                        'pipelineB_result'))
+                                                                   'pipelineB_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_2:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
@@ -371,6 +367,3 @@ class TestIntegrations(unittest.TestCase):
             else:
                 count_result[resp['key']] = resp['count']
         self.assertEqual(TESTING_RESULT, count_result)
-
-
-

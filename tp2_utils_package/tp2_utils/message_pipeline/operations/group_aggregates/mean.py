@@ -1,7 +1,8 @@
 from typing import Dict, NoReturn, Any
+
+from tp2_utils.message_pipeline.operations.group_aggregates.count import Count
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.group_aggregates.sum import Sum
-from tp2_utils.message_pipeline.operations.group_aggregates.count import Count
 
 
 class Mean(GroupAggregate):

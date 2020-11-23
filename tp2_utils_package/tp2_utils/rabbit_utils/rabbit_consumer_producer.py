@@ -1,12 +1,12 @@
 import json
 import logging
 from functools import partial
-from typing import Callable, NoReturn, Optional, Dict, List, Tuple, NamedTuple
-from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
-from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+from typing import Callable, NoReturn, Optional, Dict, List, Tuple
 
 import pika
 
+from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
+from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 from .message_set.message_set import MessageSet
 
 PUBLISH_SHARDING_FORMAT = "%s_shard%d"

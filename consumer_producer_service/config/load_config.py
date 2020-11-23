@@ -1,10 +1,13 @@
-from tp2_utils.message_pipeline.message_pipeline import MessagePipeline
-from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
-from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from typing import NamedTuple, List, Dict, Callable, Optional, Any
-from yaml import load
+
 from yaml import Loader
+from yaml import load
+
+from tp2_utils.message_pipeline.message_pipeline import MessagePipeline
+from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
+from tp2_utils.message_pipeline.operations.operation import Operation
+from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
+
 
 class ConsumerProducerServiceConfig(NamedTuple):
     message_pipeline: MessagePipeline
@@ -13,6 +16,7 @@ class ConsumerProducerServiceConfig(NamedTuple):
     produce_to: List[str]
     messages_to_group: int
     publisher_sharding: Optional[Any]
+
 
 def load_config(config_path: str,
                 func_dict: Dict[str, Callable]) -> ConsumerProducerServiceConfig:
@@ -43,7 +47,8 @@ def load_config(config_path: str,
             if isinstance(v, str) and v in func_dict:
                 operation['args'][k] = func_dict[v]
         if operation['type'] == 'GroupBy':
-            operation['args']['aggregates'] = [group_aggregates[agg_name] for agg_name in operation['args']['aggregates']]
+            operation['args']['aggregates'] = [group_aggregates[agg_name] for agg_name in
+                                               operation['args']['aggregates']]
         op = Operation.factory(operation['type'], **operation['args'])
         operations[operation['name']] = op
     if 'message_pipeline_kwargs' in config_dict:
@@ -58,5 +63,3 @@ def load_config(config_path: str,
                                          messages_to_group=messages_to_group,
                                          message_pipeline=message_pipeline,
                                          publisher_sharding=publisher_sharding)
-
-

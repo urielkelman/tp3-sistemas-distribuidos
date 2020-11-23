@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
-from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
 
+from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
 
 WINDOW_END_MESSAGE = {}
 
@@ -15,7 +15,7 @@ class MessagePipeline:
         self.ends_received = 0
 
     def _change_end_to_broadcast(self, responses: List[Dict]) -> List:
-        return [BroadcastMessage(item=r) if r==WINDOW_END_MESSAGE else r for r in responses]
+        return [BroadcastMessage(item=r) if r == WINDOW_END_MESSAGE else r for r in responses]
 
     def process(self, item: Dict) -> Tuple[List, bool]:
         if item == WINDOW_END_MESSAGE:
@@ -28,8 +28,7 @@ class MessagePipeline:
             for item in items_to_process:
                 new_items_to_process += op.process(item)
             items_to_process = new_items_to_process
-        items_to_process = [r for r in items_to_process if r != WINDOW_END_MESSAGE]
         if self.ends_received >= self.ends_to_receive:
-            items_to_process += [WINDOW_END_MESSAGE]*self.ends_to_send
+            items_to_process += [WINDOW_END_MESSAGE] * (self.ends_to_send - 1)
             return self._change_end_to_broadcast(items_to_process), True
         return self._change_end_to_broadcast(items_to_process), False
