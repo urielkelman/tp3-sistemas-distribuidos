@@ -22,8 +22,10 @@ def leq_than_50(number):
 def leq_than_5(number):
     return number >= 5
 
+
 def leq_than_1(number):
     return number >= 1
+
 
 def equal_to_5(number):
     return number == 5

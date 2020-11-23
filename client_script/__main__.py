@@ -1,14 +1,14 @@
+import argparse
 import json
-from multiprocessing import Process
 from datetime import datetime
+from multiprocessing import Process
+
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.rabbit_producer import RabbitQueueProducer
 
 REVIEWS_QUEUE = 'yelp_reviews_news'
 BUSINESSES_QUEUE = 'yelp_businesses_news'
-REVIEWS_JSON_PATH = 'yelp_academic_dataset_review.json'
-BUSINESSES_JSON_PATH = 'yelp_academic_dataset_business.json'
 MESSAGE_GROUPING = 1000
 RABBIT_HOST = 'localhost'
 
@@ -18,8 +18,17 @@ MORE_THAN_5_REVIEWS_SAME_TEXT_PATH = "users_more_than_5_reviews_same_text.txt"
 DAY_FREQ_PATH = "day_histogram.txt"
 FUNNY_CITIES_PATH = "top_10_funny_cities.txt"
 
+parser = argparse.ArgumentParser(description='Tp2 client')
+parser.add_argument('--reviews_path', help="path to reviews", required=True)
+parser.add_argument('--business_path', help="path to businesses", required=True)
+args = parser.parse_args()
+REVIEWS_JSON_PATH = args.reviews_path
+BUSINESSES_JSON_PATH = args.business_path
+
+
 def print_w_timestamp(text):
     print("%s - %s" % (datetime.now().isoformat(), text))
+
 
 print_w_timestamp("Start publishing of businesses")
 producer = RabbitQueueProducer(host=RABBIT_HOST, publish_queue=BUSINESSES_QUEUE)
@@ -112,7 +121,8 @@ cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_50_or_more_reviews_and
 p = Process(target=cp)
 p.start()
 p.join()
-print_w_timestamp("The result of users with 50 or more reviews and all 5 stars are in %s" % MORE_THAN_50_REVIEWS_5_STARS_PATH)
+print_w_timestamp(
+    "The result of users with 50 or more reviews and all 5 stars are in %s" % MORE_THAN_50_REVIEWS_5_STARS_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_5_or_more_reviews_and_same_text',
                                  [],
                                  DataGatherer(MORE_THAN_5_REVIEWS_SAME_TEXT_PATH).gather_users,
@@ -120,7 +130,8 @@ cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_5_or_more_reviews_and_
 p = Process(target=cp)
 p.start()
 p.join()
-print_w_timestamp("The result of users with 5 or more reviews and same text are in %s" % MORE_THAN_5_REVIEWS_SAME_TEXT_PATH)
+print_w_timestamp(
+    "The result of users with 5 or more reviews and same text are in %s" % MORE_THAN_5_REVIEWS_SAME_TEXT_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_reviews_histogram_finished',
                                  [],
                                  DataGatherer(DAY_FREQ_PATH).gather_day_freq,
