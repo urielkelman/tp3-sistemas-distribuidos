@@ -2,7 +2,7 @@ rabbit_params:
   host: rabbit
   consume_from: yelp_business_funny_reviews_city_count_consumer
   produce_to:
-    - yelp_business_city_funny_count
+    - yelp_top_10_funny_cities
   messages_to_group: 100
 
 group_aggregates:
@@ -19,9 +19,16 @@ operations:
       group_by: city
       aggregates:
         - SumCount
+  - name: Top10FunnyCities
+    type: TopN
+    args:
+      top_key: city
+      value_name: count
+      n: 10
 
 message_pipeline:
   - GroupByCity
+  - Top10FunnyCities
 
 message_pipeline_kwargs:
   ends_to_receive: 2

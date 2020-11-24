@@ -136,22 +136,10 @@ services:
       - rabbitmq
     restart: on-failure
 
-  funny_reviews_city_count:
-    container_name: funny_reviews_city_count
+  top_10_count_by_city:
+    container_name: top_10_count_by_city
     image: consumer_producer_service:latest
-    entrypoint: python3 /__main__.py --config /configs/funny_reviews_city_count.yml
-    networks:
-      - tp2_net
-    volumes:
-      - ./configs:/configs
-    depends_on:
-      - rabbitmq
-    restart: on-failure
-
-  filter_top_10_funny_cities:
-    container_name: filter_top_10_funny_cities
-    image: consumer_producer_service:latest
-    entrypoint: python3 /__main__.py --config /configs/filter_top_10_funny_cities.yml
+    entrypoint: python3 /__main__.py --config /configs/top_10_count_by_city.yml
     networks:
       - tp2_net
     volumes:
