@@ -12,7 +12,6 @@ class Mean(GroupAggregate):
         :param mean_value: the value to calculate the mean
         :param mean_suffix: the suffix to add to the output key
         """
-        self.sum_by_key = {}
         self.mean_value = mean_value
         self.mean_suffix = mean_suffix
         self.count = Count()
