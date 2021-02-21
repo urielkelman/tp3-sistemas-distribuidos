@@ -50,13 +50,22 @@ class BullyLeaderElection:
             "message": LEADER_MESSAGE
         }
 
+    def _become_leader(self):
+        self._current_leader = self._process_number
+        return [self._generate_leader_message(destination_process) for destination_process in
+                self._other_processes_number if destination_process != self._process_number]
+
     def start_election(self) -> List[Dict]:
         """
         Returns a list with all the messages to be sent to other processes at the start of an election.
         """
+        self._current_leader = -1
         election_messages = [self._generate_election_message(destination_process) for destination_process in
                              self._other_processes_number if destination_process > self._process_number]
         self._empty_responses_to_be_leader = len(election_messages)
+        if not self._empty_responses_to_be_leader:
+            return self._become_leader()
+
         return election_messages
 
     def receive_message(self, message: Dict) -> Optional[List[Dict]]:
@@ -64,6 +73,7 @@ class BullyLeaderElection:
         Processes a message and returns a list of messages to respond.
         :param message: the message to process.
         """
+        assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
             return [self._generate_ok_message(message["origin_process_number"])] + self.start_election()
         elif message["message"] == LEADER_MESSAGE:
@@ -77,9 +87,10 @@ class BullyLeaderElection:
         if message["message"] == ELECTION_MESSAGE:
             self._empty_responses_to_be_leader -= 1
             if not self._empty_responses_to_be_leader:
-                self._current_leader = self._process_number
-                return [self._generate_leader_message(destination_process) for destination_process in
-                        self._other_processes_number]
+                return self._become_leader()
 
-    def current_leader(self):
+    def current_leader(self) -> int:
+        """
+        Returns the identifying number of the current registered leader.
+        """
         return self._current_leader
