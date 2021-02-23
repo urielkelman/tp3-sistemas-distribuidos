@@ -34,5 +34,8 @@ class Mean(GroupAggregate):
         """
         counts = self.count.dump()
         sums = self.sum.dump()
-        return {k: {self.mean_value + self.mean_suffix: v[self.mean_value + '_sum'] / counts[k]['count']}
+        result = {k: {self.mean_value + self.mean_suffix: v[self.mean_value + '_sum'] / counts[k]['count']}
                 for k, v in sums.items()}
+        self.count = Count()
+        self.sum = Sum(self.mean_value)
+        return result

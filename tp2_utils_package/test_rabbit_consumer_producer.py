@@ -7,8 +7,8 @@ from multiprocessing import Process, Pipe
 from typing import Dict, List, Tuple
 
 import pika
-
-from tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
 CONSUME_QUEUE = "consume_example"
@@ -23,22 +23,29 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         return [], False
 
     @staticmethod
-    def publish_multiple(message: Dict) -> Tuple[List[Dict], bool]:
+    def publish_multiple(message: Dict, idempotency_set=None) -> Tuple[List[Dict], bool]:
+        if message and idempotency_set and message in idempotency_set:
+            return [], False
+        if idempotency_set and message:
+            idempotency_set.add(message)
         if isinstance(message["value"], int) or isinstance(message["value"], float):
             return [{"type": message["type"]}] * int(message["value"]), False
         return [], False
 
     @staticmethod
-    def republish_and_stop_with_key_z(message: Dict) -> Tuple[List[Dict], bool]:
+    def republish_and_stop_with_key_z(message: Dict, idempotency_set=None) -> Tuple[List[Dict], bool]:
+        if message and idempotency_set and message in idempotency_set:
+            return [], False
+        if idempotency_set and message:
+            idempotency_set.add(message)
         if message['key'] != 'Z':
             return [message], False
         else:
             return [message], True
 
-    def _start_process(self, func, messages_to_group=1, idempotency_set=None):
+    def _start_process(self, func, messages_to_group=1):
         RabbitQueueConsumerProducer("localhost", CONSUME_QUEUE, [RESPONSE_QUEUE], func,
-                                    messages_to_group=messages_to_group,
-                                    idempotency_set=idempotency_set)()
+                                    messages_to_group=messages_to_group)()
 
     @staticmethod
     def _read_process(write_pipe: Pipe):
@@ -167,7 +174,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_idempotency_set_integration(self):
         self.test_process = Process(target=self._start_process,
-                                    args=(self.publish_multiple, 2, self.message_set))
+                                    args=((lambda m: self.publish_multiple(m, self.message_set)), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -198,7 +205,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_simple_stop(self):
         self.test_process = Process(target=self._start_process,
-                                    args=(self.republish_and_stop_with_key_z, 2, self.message_set))
+                                    args=((lambda m: self.republish_and_stop_with_key_z(m, self.message_set)), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -214,3 +221,14 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         self.assertFalse(self.recv_pipe.poll(1))
         self.assertEqual(processed_data[0], [{"key": "A", "value": 4.2}])
         self.assertEqual(processed_data[1], [{"key": "Z", "value": 7}])
+
+    def test_stop_on_first_message(self):
+        def return_stop(msg):
+            return [BroadcastMessage({})]*10, True
+        self.test_process = Process(target=self._start_process,
+                                    args=(return_stop, 1))
+        self.test_process.start()
+        self.channel.queue_declare(queue=CONSUME_QUEUE)
+        self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
+                                   body=json.dumps({"key": "A", "value": 4.2}))
+        self.test_process.join()

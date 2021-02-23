@@ -7,7 +7,6 @@ import pika
 
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-from .message_set.message_set import MessageSet
 
 PUBLISH_SHARDING_FORMAT = "%s_shard%d"
 
@@ -20,7 +19,7 @@ class RabbitQueueConsumerProducer:
 
     def consume(self, consume_func: Callable[[Dict], Tuple[List, bool]],
                 ch, method, properties, body) -> NoReturn:
-        stop_consumer = False
+        stop_consuming = False
         responses = []
         messages = []
         try:
@@ -28,25 +27,23 @@ class RabbitQueueConsumerProducer:
             if isinstance(data, list):
                 for message in data:
                     messages.append(message)
-                    if not self.idempotency_set or self._obj_to_bytes(message).encode() not in self.idempotency_set:
-                        resp, _stop = consume_func(message)
-                        stop_consumer = _stop or stop_consumer
-                        if resp:
-                            for r in resp:
-                                responses.append(r)
-            else:
-                if not self.idempotency_set or self._obj_to_bytes(data).encode() not in self.idempotency_set:
-                    messages.append(data)
-                    resp, _stop = consume_func(data)
-                    stop_consumer = _stop or stop_consumer
+                    resp, _stop = consume_func(message)
+                    stop_consuming = _stop or stop_consuming
                     if resp:
                         for r in resp:
                             responses.append(r)
-        except Exception:
+            else:
+                    messages.append(data)
+                    resp, _stop = consume_func(data)
+                    stop_consuming = _stop or stop_consuming
+                    if resp:
+                        for r in resp:
+                            responses.append(r)
+        except Exception as e:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.exception("Exception while consuming message")
             ch.basic_nack(delivery_tag=method.delivery_tag)
-            return
+            raise e
         try:
             if responses:
                 broadcast_messages = []
@@ -67,17 +64,15 @@ class RabbitQueueConsumerProducer:
                 if broadcast_messages:
                     for message in broadcast_messages:
                         self._publish(ch, message)
-        except Exception:
+        except Exception as e:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.exception("Exception while sending message")
             ch.basic_nack(delivery_tag=method.delivery_tag)
-            return
-        if self.idempotency_set:
-            for message in messages:
-                if message:
-                    self.idempotency_set.add(self._obj_to_bytes(message).encode())
+            raise e
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        if stop_consumer:
+        if stop_consuming:
+            if RabbitQueueConsumerProducer.logger:
+                RabbitQueueConsumerProducer.logger.info("Stopping consumer")
             ch.stop_consuming()
             self.connection.close()
 
@@ -121,7 +116,6 @@ class RabbitQueueConsumerProducer:
                  response_queues: List[str],
                  consume_func: Callable[[Dict], Tuple[List, bool]],
                  messages_to_group: int = 1,
-                 idempotency_set: Optional[MessageSet] = None,
                  publisher_sharding: Optional[PublisherSharding] = None,
                  logger: Optional[logging.Logger] = None):
         """
@@ -134,14 +128,12 @@ class RabbitQueueConsumerProducer:
                 receives a dict and return a list of dicts to respond and a boolean
                 indicating whether to stop consuming
         :param messages_to_group: the amount of messages to group
-        :param idempotency_set: an object of type DMessageSet to handle the arrival
         of duplicated messages
         :param publisher_sharding: object for sharding messages
         :param logger: the logger to use
         """
         if logger:
             RabbitQueueConsumerProducer.logger = logger
-        self.idempotency_set = idempotency_set
         self.consume_queue = consume_queue
         self.response_queues = response_queues
         self.messages_to_group = messages_to_group

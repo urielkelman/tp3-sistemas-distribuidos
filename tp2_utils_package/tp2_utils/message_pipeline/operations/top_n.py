@@ -39,4 +39,5 @@ class TopN(Operation):
                 response.append({self.top_key: k, self.value_name: v})
             response = sorted(response, key=lambda x: x[self.value_name], reverse=True)
             response.append(WINDOW_END_MESSAGE)
+            self.heap = []
             return response

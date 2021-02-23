@@ -1,8 +1,9 @@
 import base64
 import os
 import pickle
-
+import glob
 import pyhash
+import json
 
 message = "Python is fun"
 message_bytes = message.encode('ascii')
@@ -70,6 +71,10 @@ class DiskMessageSet(MessageSet):
         self.log_uncommited = []
 
     def __contains__(self, item) -> bool:
+        if isinstance(item, dict):
+            item = json.dumps(item).encode('utf-8')
+        elif isinstance(item, str):
+            item = item.encode('utf-8')
         if item in self.contains_lru:
             return True
         if item in self.add_lru:
@@ -88,6 +93,10 @@ class DiskMessageSet(MessageSet):
         return False
 
     def add(self, item, lazy=True):
+        if isinstance(item, dict):
+            item = json.dumps(item).encode('utf-8')
+        elif isinstance(item, str):
+            item = item.encode('utf-8')
         if lazy and item in self:
             return
         item_hashes = [self.hasher(item, seed=i) % self.hash_mod for i in range(len(self.hashing_sets))]
@@ -123,3 +132,14 @@ class DiskMessageSet(MessageSet):
             for i in range(len(self.hashing_sets)):
                 self.hashing_sets[i].update([item_hashes[i]])
             self.add_lru.append(item)
+
+    def flush(self):
+        if os.path.exists(LOGFILE_PATH % self.set_data_path):
+            os.remove(LOGFILE_PATH % self.set_data_path)
+        if os.path.exists(SETS_PATH % self.set_data_path):
+            os.remove(SETS_PATH % self.set_data_path)
+        buckets = glob.glob(self.set_data_path + '/*')
+        for b in buckets:
+            os.remove(b)
+        self.__init__(self.set_data_path, self.hash_mod, len(self.hashing_sets))
+

@@ -3,7 +3,7 @@ import random
 import shutil
 import unittest
 
-from .tp2_utils.rabbit_utils.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 
 
 class TestDiskMessageSet(unittest.TestCase):
