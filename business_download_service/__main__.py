@@ -92,32 +92,23 @@ def notify_data_available(item):
         return [BroadcastMessage(WINDOW_END_MESSAGE)], False
     return [], False
 
-
-cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
-                                 [BUSINESS_NOTIFY_END],
-                                 DataGatherer().gather_business_locations,
-                                 messages_to_group=1)
-p = Process(target=cp)
-p.start()
-p.join()
-
-print("Starting download service")
-
-SocketDataDownloader(port, listen_backlog, clients).open_socket_for_download()
-
-
 def empty_queue(item):
     if item == WINDOW_END_MESSAGE:
         return [], True
     return [], False
 
+while True:
+    print("Consuming businesses")
+    cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
+                                     [BUSINESS_NOTIFY_END],
+                                     DataGatherer().gather_business_locations,
+                                     messages_to_group=1)
+    p = Process(target=cp)
+    p.start()
+    p.join()
 
-print("Stoping downloader service")
-cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESS_NOTIFY_END,
-                                 [],
-                                 empty_queue,
-                                 messages_to_group=1)
-p = Process(target=cp)
-p.start()
-p.join()
-exit(0)
+    print("Starting download service")
+
+    SocketDataDownloader(port, listen_backlog, clients).open_socket_for_download()
+
+    print("Stoping downloader service")

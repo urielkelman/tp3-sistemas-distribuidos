@@ -160,7 +160,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./download_service_data:/data
+      - ./volumes/download_service_data:/data
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -178,7 +178,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./download_service_data:/data
+      - ./volumes/joiner_service_data:/data
     depends_on:
       - rabbitmq
     restart: on-failure
