@@ -1,6 +1,6 @@
 import unittest
 
-from .tp2_utils.lider_election.bully_leader_election import BullyLeaderElection
+from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 
 
 class TestBullyLeaderElection(unittest.TestCase):
@@ -32,6 +32,7 @@ class TestBullyLeaderElection(unittest.TestCase):
         bully_start_election_messages_2 = bully_leader_election_2.start_election()
 
         bully_2_response = bully_leader_election_2.receive_message(bully_start_election_messages_1[0])
+
         bully_leader_election_1.receive_message(bully_start_election_messages_2[0])
         bully_leader_election_1.receive_message(bully_2_response[0])
 

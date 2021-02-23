@@ -4,16 +4,15 @@ ELECTION_MESSAGE = "ELECTION"
 OK_MESSAGE = "OK"
 LEADER_MESSAGE = "LEADER"
 
-
 class BullyLeaderElection:
-    def __init__(self, process_number, other_processes_number):
+    def __init__(self, process_number, all_processes_number):
         """
         Starts a bully leader election algorithm entity, that represents a process.
         :param process_number: the identifying number of the process. Unique for each process.
-        :param other_processes_number: the identifying numbers of the other processes that exists in the system.
+        :param all_processes_number: the identifying numbers of all the processes that exists in the system.
         """
         self._process_number = process_number
-        self._other_processes_number = other_processes_number
+        self._other_processes_number = all_processes_number
         self._current_leader = -1
         self._empty_responses_to_be_leader = -1
 
@@ -51,6 +50,7 @@ class BullyLeaderElection:
         }
 
     def _become_leader(self):
+        self._is_running_election = False
         self._current_leader = self._process_number
         return [self._generate_leader_message(destination_process) for destination_process in
                 self._other_processes_number if destination_process != self._process_number]
@@ -75,7 +75,10 @@ class BullyLeaderElection:
         """
         assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
-            return [self._generate_ok_message(message["origin_process_number"])] + self.start_election()
+            messages = [self._generate_ok_message(message["origin_process_number"])]
+            if self._current_leader != -1:
+                messages += [self.start_election()]
+            return messages
         elif message["message"] == LEADER_MESSAGE:
             self._current_leader = message["origin_process_number"]
 
@@ -91,6 +94,6 @@ class BullyLeaderElection:
 
     def current_leader(self) -> int:
         """
-        Returns the identifying number of the current registered leader.
+        Returns the identifying number of the current registered leader, or -1 if there is not a leader.
         """
         return self._current_leader
