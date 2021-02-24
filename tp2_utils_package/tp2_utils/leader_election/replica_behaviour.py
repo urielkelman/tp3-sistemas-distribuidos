@@ -7,10 +7,6 @@ from tp2_utils_package.tp2_utils.json_utils.json_sender import JsonSender
 
 from typing import Dict
 
-CONNECTION_LAYER = "CONNECTION"
-ACK_MESSAGE = "ACK"
-BULLY_LAYER = "BULLY"
-
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.INFO,
@@ -19,23 +15,11 @@ logging.basicConfig(
 
 
 class ReplicaBehaviour(NodeBehaviour):
-    def __init__(self, connections, replica_id, bully_leader_election):
-        self._connections = connections
-        self._replica_id = replica_id
-        self._bully_leader_election = bully_leader_election
-
     def _generate_bully_message(self, message):
         return {
-            "layer": BULLY_LAYER,
+            "layer": self.BULLY_LAYER,
             "message": message,
-            "host_id": self._replica_id
-        }
-
-    def _generate_ack_message(self) -> Dict:
-        return {
-            "layer": CONNECTION_LAYER,
-            "message": ACK_MESSAGE,
-            "host_id": self._replica_id
+            "host_id": self._bully_leader_election.get_id()
         }
 
     def _send_message(self, host_id: int, message: Dict, retry_connection=False):
@@ -51,7 +35,7 @@ class ReplicaBehaviour(NodeBehaviour):
                 connection = self._connections[host_id]
                 JsonSender.send_json(connection, self._generate_bully_message(message))
                 response = JsonReceiver.receive_json(connection)
-                if response["layer"] == BULLY_LAYER:
+                if response["layer"] == self.BULLY_LAYER:
                     self._bully_leader_election.receive_message(response["message"])
                 finish_sending = True
                 connection.close()
@@ -86,3 +70,4 @@ class ReplicaBehaviour(NodeBehaviour):
     def execute_tasks(self):
         if self._bully_leader_election.current_leader() == -1 or not self._check_leader_connection():
             self._send_election_messages()
+        self._check_for_incoming_messages()

@@ -4,6 +4,7 @@ ELECTION_MESSAGE = "ELECTION"
 OK_MESSAGE = "OK"
 LEADER_MESSAGE = "LEADER"
 
+
 class BullyLeaderElection:
     def __init__(self, process_number, all_processes_number):
         """
@@ -97,3 +98,9 @@ class BullyLeaderElection:
         Returns the identifying number of the current registered leader, or -1 if there is not a leader.
         """
         return self._current_leader
+
+    def get_id(self) -> int:
+        """
+        Returns the assigned id.
+        """
+        return self._process_number

@@ -37,8 +37,6 @@ class BullyConnection:
             "host_id": self._host_id
         }
 
-    # TODO: Situation: a process send an election message but doesn't get a response, because the other just receives.
-
     def launch_listening_process(self, port, incoming_messages_queue, outcoming_messages_queue):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(('', port))
@@ -85,20 +83,13 @@ class BullyConnection:
 
     def _run(self):
         """
-        Loops doing the connections tasks. Requests ACK from leader node and check if it has received any other messages.
+        Loops doing the connections tasks. Invoke the appropriate behaviour based on who the current leader is.
         """
         while True:
             current_leader = self._bully_leader_election.current_leader()
             if current_leader != -1 or current_leader != self._host_id:
-                replica_behaviour = ReplicaBehaviour(self._sending_connections, self._host_id, current_leader, self._bully_leader_election)
+                replica_behaviour = ReplicaBehaviour(self._sending_connections, current_leader, self._bully_leader_election, self._host_id, )
                 replica_behaviour.execute_tasks()
-            while not self._bully_messages_queue.empty():
-                received_message = self._bully_messages_queue.get()
-                message = self._bully_leader_election.receive_message(received_message)
-                if message:
-                    self._bully_response_messages_queues[received_message["host_id"]].put(message)
-                else:
-                    self._bully_response_messages_queues[received_message["host_id"]].put(self._generate_ack_message())
             sleep(3)
 
     def current_leader(self):
