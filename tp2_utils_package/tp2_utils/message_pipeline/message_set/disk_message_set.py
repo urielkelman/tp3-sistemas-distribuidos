@@ -60,7 +60,10 @@ class DiskMessageSet(MessageSet):
                     set_i, hash_result = int(set_i), int(hash_result)
                     self.hashing_sets[set_i].remove(hash_result)
                 else:
-                    item=base64.b64decode(line[:-1])
+                    try:
+                        item=base64.b64decode(line[:-1])
+                    except Exception:
+                        continue
                     item_hashes = [self.hasher(item, seed=i) % self.hash_mod for i in range(len(self.hashing_sets))]
                     if item_hashes[0] not in self.bucket_numbers:
                         continue
@@ -89,7 +92,7 @@ class DiskMessageSet(MessageSet):
 
     def __init__(self, set_data_path: str, hash_mod: int = 10000,
                  number_of_hashes: int = 20, commit_number: Optional[int] = None,
-                 recover_state_on_init: bool = True):
+                 recover_state_on_init: bool = False):
         super().__init__()
         self.set_data_path = set_data_path
         self.hash_mod = hash_mod
@@ -100,7 +103,6 @@ class DiskMessageSet(MessageSet):
         self.hasher = pyhash.murmur3_32()
         self.prepare_buffer = []
         self.hashing_sets = []
-        self.commit_number = 1
         self.bucket_numbers = {}
         # This allows an invalid state in the object, sorry fontela :(
         if recover_state_on_init:
@@ -190,23 +192,22 @@ class DiskMessageSet(MessageSet):
         Commits the prepared changes
         :return: a commit number
         """
-        rn = self.commit_number-1
         if self.prepare_buffer:
             for data in self.prepare_buffer:
                 self._add(data)
             # This dump could fail and it would be irrecoverable
             with open(SETS_PATH % self.set_data_path, "wb") as sets_file:
                 pickle.dump((self.hashing_sets, self.bucket_numbers), sets_file)
-            self.writeahead_log.write(END_COMMIT_LINE % self.commit_number)
-            self.writeahead_log.flush()
-            self.writeahead_log.close()
-            if self.commit_number % RESET_LOG_EACH_K_COMMITS == 0:
-                self.writeahead_log = open(LOGFILE_PATH % self.set_data_path, "w")
-            else:
-                self.writeahead_log = open(LOGFILE_PATH % self.set_data_path, "a")
-            self.prepare_buffer = []
-            rn = self.commit_number
-            self.commit_number += 1
+        self.writeahead_log.write(END_COMMIT_LINE % self.commit_number)
+        self.writeahead_log.flush()
+        self.writeahead_log.close()
+        if self.commit_number % RESET_LOG_EACH_K_COMMITS == 0:
+            self.writeahead_log = open(LOGFILE_PATH % self.set_data_path, "w")
+        else:
+            self.writeahead_log = open(LOGFILE_PATH % self.set_data_path, "a")
+        self.prepare_buffer = []
+        rn = self.commit_number
+        self.commit_number += 1
         return rn
 
     def flush(self):
@@ -217,5 +218,13 @@ class DiskMessageSet(MessageSet):
         buckets = glob.glob(self.set_data_path + '/*')
         for b in buckets:
             os.remove(b)
-        self.__init__(self.set_data_path, self.hash_mod, len(self.hashing_sets))
+
+        self.contains_lru = deque(maxlen=CONTAINS_CACHE_SIZE)
+        self.add_lru = deque(maxlen=ADD_LRU)
+        self.writeahead_log = None
+        self.prepare_buffer = []
+        self.hashing_sets = []
+        self.bucket_numbers = {}
+
+        self.recover_state()
 

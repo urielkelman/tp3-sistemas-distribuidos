@@ -2,18 +2,27 @@ from typing import Dict, List, Tuple, Optional, NoReturn, Any
 from tp2_utils.message_pipeline.message_set.message_set import MessageSet
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
 from tp2_utils.interfaces.state_commiter import StateCommiter
+import os
+import re
+import pickle
 
 
 WINDOW_END_MESSAGE = {}
+COMMITS_TO_KEEP = 10
+ROTATING_COMMIT_SAVE_PATH = "%s/%d.pickle"
+ROTATING_COMMIT_REGEX = "(\d+).pickle"
 
 
 class MessagePipeline(StateCommiter):
     def __init__(self, operations: List['Operation'],
+                 data_path: Optional[str] = None,
                  idempotency_set: Optional[MessageSet] = None,
-                 ends_to_receive: int = 1, ends_to_send: int = 1, stop_at_window_end: bool = False):
+                 ends_to_receive: int = 1, ends_to_send: int = 1,
+                 stop_at_window_end: bool = False):
         """
 
         :param operations: the operations to use in the pipeline
+        :param data_path: data path for saving the state if state needs to be saved
         :param idempotency_set: an object of type MessageSet to handle the arrival
         :param ends_to_receive: the ends to receive for consider that the stream ended
         :param ends_to_send: the ends to send when stream ends
@@ -22,9 +31,28 @@ class MessagePipeline(StateCommiter):
         super().__init__()
         self.operations = operations
         self.idempotency_set = idempotency_set
-        # TODO: recover actual commit
-        if self.idempotency_set:
-            self.idempotency_set.recover_state()
+        self.data_path = data_path
+        available_commits = []
+        if data_path:
+            for f in os.listdir(data_path):
+                if re.match(ROTATING_COMMIT_REGEX, f):
+                    available_commits.append(int(re.findall(ROTATING_COMMIT_REGEX, f)[0]))
+        if available_commits:
+            sorted_commits = sorted(available_commits, reverse=True)
+            for cn in sorted_commits:
+                try:
+                    with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'rb') as commit_file:
+                        self.operations = pickle.load(commit_file)
+                except Exception:
+                    continue
+                self.commit_number = cn
+                if self.idempotency_set:
+                    self.idempotency_set.recover_state(self.commit_number)
+                break
+        else:
+            if self.idempotency_set:
+                self.idempotency_set.recover_state()
+            self.commit_number = 1
         self.ends_to_receive = ends_to_receive
         self.ends_to_send = ends_to_send
         self.ends_received = 0
@@ -40,13 +68,24 @@ class MessagePipeline(StateCommiter):
         if self.idempotency_set:
             self.idempotency_set.flush()
 
-    # TODO: implement this
     def commit(self) -> int:
         """
         Commits the prepared changes
         :return: a commit number
         """
-        return -1
+        if self.idempotency_set:
+            cn = self.idempotency_set.commit()
+            self.commit_number = cn
+        else:
+            cn = self.commit_number
+            self.commit_number += 1
+        if self.data_path:
+            with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number), 'wb') as commit_file:
+                pickle.dump(self.operations, commit_file)
+            if (self.commit_number > COMMITS_TO_KEEP and
+                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))):
+                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))
+        return cn
 
     def prepare(self, item: Dict) -> Tuple[List, bool]:
         if self.idempotency_set and item and item in self.idempotency_set:
@@ -63,7 +102,6 @@ class MessagePipeline(StateCommiter):
             items_to_process = new_items_to_process
         if self.idempotency_set and item:
             self.idempotency_set.prepare(item)
-            self.idempotency_set.commit()
         if self.ends_received == self.ends_to_receive:
             items_to_process += [WINDOW_END_MESSAGE] * (self.ends_to_send - 1)
             if not self.stop_at_window_end:
