@@ -29,4 +29,4 @@ message_pipeline:
 
 message_pipeline_kwargs:
   ends_to_receive: 1
-  ends_to_send: 2
+  ends_to_send: 1

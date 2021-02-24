@@ -29,4 +29,6 @@ class Count(GroupAggregate):
         Dumps all the statistics to a dict
         :return: the dict with the group value as key and a dict of statistics
         """
-        return {k: {self.count_name: v} for k, v in self.count_by_key.items()}
+        result = {k: {self.count_name: v} for k, v in self.count_by_key.items()}
+        self.count_by_key = {}
+        return result

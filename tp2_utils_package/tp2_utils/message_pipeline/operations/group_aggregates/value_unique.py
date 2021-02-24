@@ -37,4 +37,6 @@ class ValueUnique(GroupAggregate):
         Dumps all the statistics to a dict
         :return: the dict with the group value as key and a dict of statistics
         """
-        return {k: {self.value_name + self.unique_suffix: v[0]} for k, v in self.unique_dict.items()}
+        result = {k: {self.value_name + self.unique_suffix: v[0]} for k, v in self.unique_dict.items()}
+        self.unique_dict = {}
+        return result

@@ -156,16 +156,17 @@ services:
       - PORT=2222
       - LISTEN_BACKLOG=3
       - RABBIT_HOST=rabbit
-      - CLIENTS=2
+      - CLIENTS=1
     networks:
       - tp2_net
     volumes:
-      - ./download_service_data:/data
+      - ./volumes/download_service_data:/data
     depends_on:
       - rabbitmq
     restart: on-failure
 
   business_joiner_service:
+    container_name: business_joiner_service
     image: business_joiner_service:latest
     entrypoint: python3 /__main__.py
     environment:
@@ -177,12 +178,10 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./download_service_data:/data
+      - ./volumes/joiner_service_data:/data
     depends_on:
       - rabbitmq
     restart: on-failure
-    deploy:
-      replicas: 2
 
 volumes:
   rabbitmq_data:

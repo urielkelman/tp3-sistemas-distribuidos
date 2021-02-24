@@ -11,3 +11,10 @@ class MessageSet:
     @abstractmethod
     def add(self, item) -> NoReturn:
         pass
+
+    @abstractmethod
+    def flush(self) -> NoReturn:
+        """
+        Flushes the state
+        """
+        pass

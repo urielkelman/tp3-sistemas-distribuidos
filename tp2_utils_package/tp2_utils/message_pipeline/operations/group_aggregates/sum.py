@@ -34,4 +34,6 @@ class Sum(GroupAggregate):
         Dumps all the statistics to a dict
         :return: the dict with the group value as key and a dict of statistics
         """
-        return {k: {self.sum_value + self.sum_suffix: v} for k, v in self.sum_by_key.items()}
+        result = {k: {self.sum_value + self.sum_suffix: v} for k, v in self.sum_by_key.items()}
+        self.sum_by_key = {}
+        return result

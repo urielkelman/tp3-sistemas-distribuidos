@@ -31,5 +31,5 @@ message_pipeline:
   - Top10FunnyCities
 
 message_pipeline_kwargs:
-  ends_to_receive: 2
+  ends_to_receive: 1
   ends_to_send: 1
