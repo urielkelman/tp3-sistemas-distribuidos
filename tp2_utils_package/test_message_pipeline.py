@@ -174,19 +174,19 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                 ]),
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)],
                                stop_at_window_end=True)
-        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
                            {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
                            BroadcastMessage(WINDOW_END_MESSAGE)], True))
@@ -201,36 +201,36 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                 ]),
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)],
                                stop_at_window_end=False)
-        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
                            {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
                            BroadcastMessage(WINDOW_END_MESSAGE)], False))
 
-        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
                            {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
                            BroadcastMessage(WINDOW_END_MESSAGE)], False))
@@ -245,20 +245,20 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                 ]),
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)],
                                ends_to_receive=2, ends_to_send=2, stop_at_window_end=True)
-        self.assertEqual(pipe.process({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
-        self.assertEqual(pipe.process({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
                            {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
                            BroadcastMessage(WINDOW_END_MESSAGE), BroadcastMessage(WINDOW_END_MESSAGE)], True))
@@ -266,13 +266,13 @@ class TestDiskMessagePipeline(unittest.TestCase):
     def test_pipeline_ends(self):
         pipe = MessagePipeline([],
                                ends_to_receive=3, ends_to_send=1, stop_at_window_end=True)
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE), ([], False))
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([BroadcastMessage(WINDOW_END_MESSAGE)], True))
         pipe = MessagePipeline([],
                                ends_to_receive=1, ends_to_send=3, stop_at_window_end=True)
-        self.assertEqual(pipe.process(WINDOW_END_MESSAGE),
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
                          ([BroadcastMessage(WINDOW_END_MESSAGE),
                            BroadcastMessage(WINDOW_END_MESSAGE),
                            BroadcastMessage(WINDOW_END_MESSAGE)], True))

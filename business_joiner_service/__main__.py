@@ -8,6 +8,7 @@ from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
 BUSINESSES_READY_PATH = "data/DOWNLOAD_READY"
@@ -37,7 +38,7 @@ while True:
 
         cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESS_NOTIFY_END,
                                          [BUSINESS_NOTIFY_END],
-                                         wait_for_file_ready,
+                                         DummyStateCommiter(wait_for_file_ready),
                                          messages_to_group=1)
         p = Process(target=cp)
         p.start()
@@ -61,7 +62,7 @@ while True:
 
     cp = RabbitQueueConsumerProducer(rabbit_host, join_from_queue,
                                      [output_joined_queue],
-                                     partial(add_location_to_businesses, business_locations),
+                                     DummyStateCommiter(partial(add_location_to_businesses, business_locations)),
                                      messages_to_group=1000)
     p = Process(target=cp)
     p.start()

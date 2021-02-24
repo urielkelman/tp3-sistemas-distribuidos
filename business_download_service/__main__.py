@@ -7,6 +7,7 @@ from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 BUSINESSES_QUEUE = 'yelp_businesses_news'
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
@@ -101,7 +102,7 @@ while True:
     print("Consuming businesses")
     cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
                                      [BUSINESS_NOTIFY_END],
-                                     DataGatherer().gather_business_locations,
+                                     DummyStateCommiter(DataGatherer().gather_business_locations),
                                      messages_to_group=1)
     p = Process(target=cp)
     p.start()

@@ -7,6 +7,7 @@ import pika
 
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+from tp2_utils.interfaces.state_commiter import StateCommiter
 
 PUBLISH_SHARDING_FORMAT = "%s_shard%d"
 
@@ -17,7 +18,7 @@ class RabbitQueueConsumerProducer:
     """
     logger: logging.Logger = None
 
-    def consume(self, consume_func: Callable[[Dict], Tuple[List, bool]],
+    def consume(self, callable_commiter: StateCommiter,
                 ch, method, properties, body) -> NoReturn:
         stop_consuming = False
         responses = []
@@ -27,14 +28,14 @@ class RabbitQueueConsumerProducer:
             if isinstance(data, list):
                 for message in data:
                     messages.append(message)
-                    resp, _stop = consume_func(message)
+                    resp, _stop = callable_commiter.prepare(message)
                     stop_consuming = _stop or stop_consuming
                     if resp:
                         for r in resp:
                             responses.append(r)
             else:
                     messages.append(data)
-                    resp, _stop = consume_func(data)
+                    resp, _stop = callable_commiter.prepare(data)
                     stop_consuming = _stop or stop_consuming
                     if resp:
                         for r in resp:
@@ -69,6 +70,7 @@ class RabbitQueueConsumerProducer:
                 RabbitQueueConsumerProducer.logger.exception("Exception while sending message")
             ch.basic_nack(delivery_tag=method.delivery_tag)
             raise e
+        callable_commiter.commit()
         ch.basic_ack(delivery_tag=method.delivery_tag)
         if stop_consuming:
             if RabbitQueueConsumerProducer.logger:
@@ -114,7 +116,7 @@ class RabbitQueueConsumerProducer:
 
     def __init__(self, host: str, consume_queue: str,
                  response_queues: List[str],
-                 consume_func: Callable[[Dict], Tuple[List, bool]],
+                 callable_commiter: StateCommiter,
                  messages_to_group: int = 1,
                  publisher_sharding: Optional[PublisherSharding] = None,
                  logger: Optional[logging.Logger] = None):
@@ -124,7 +126,7 @@ class RabbitQueueConsumerProducer:
         :param host: the hostname to connect
         :param consume_queue: the name of the queue to consume
         :param response_queues: the name of the queue in which the response will be sent
-        :param consume_func: the function that consumes and creates a response,
+        :param callable_commiter: the function that consumes and creates a response,
                 receives a dict and return a list of dicts to respond and a boolean
                 indicating whether to stop consuming
         :param messages_to_group: the amount of messages to group
@@ -146,9 +148,9 @@ class RabbitQueueConsumerProducer:
                     self.channel.queue_declare(queue=PUBLISH_SHARDING_FORMAT % (resp_queue, shard))
             else:
                 self.channel.queue_declare(queue=resp_queue)
-        consume_func = partial(self.consume, consume_func)
+        callable_commiter = partial(self.consume, callable_commiter)
         self.channel.basic_consume(queue=consume_queue,
-                                   on_message_callback=consume_func,
+                                   on_message_callback=callable_commiter,
                                    auto_ack=False)
         self.publisher_sharding = publisher_sharding
 

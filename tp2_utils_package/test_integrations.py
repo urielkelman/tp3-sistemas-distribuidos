@@ -119,7 +119,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineA_step1_queue1')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineA_step1_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
         # 3 consumers that group and count
@@ -133,7 +133,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -145,7 +145,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -157,7 +157,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -171,7 +171,7 @@ class TestIntegrations(unittest.TestCase):
                                ends_to_receive=3, ends_to_send=1, stop_at_window_end=True)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step2_queue1',
                                          ['pipelineA_step3_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -185,7 +185,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step3_queue1',
                                          ['pipelineA_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -198,7 +198,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineB_step1_shard2')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineB_step1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
                                          publisher_sharding=PublisherSharding(by_key='key',
                                                                               shards=3))
@@ -214,7 +214,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard0',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -226,7 +226,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard1',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -238,7 +238,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard2',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -251,7 +251,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step2',
                                          ['pipelineB_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,)
         self._setup_start_process(cp)
         
@@ -264,7 +264,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineC_step1_shard2')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineC_step1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
                                          publisher_sharding=PublisherSharding(by_key='key',
                                                                               shards=3))
@@ -280,7 +280,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard0',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -292,7 +292,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard1',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -304,7 +304,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard2',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -317,7 +317,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step2',
                                          ['pipelineC_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP, )
         self._setup_start_process(cp)
 
