@@ -1,6 +1,7 @@
 # tp2-distro
-[![Build Status](https://travis-ci.com/urielkelman/tp3-sistemas-distribuidos.svg?token=tFcmLjoZ6PFesBqLEXNZ&branch=master)](https://travis-ci.com/urielkelman/tp3-sistemas-distribuidos)
+[![Build Status](https://travis-ci.com/urielkelman/tp3-sistemas-distribuidos.svg?branch=master)](https://travis-ci.com/urielkelman/tp3-sistemas-distribuidos)
 [![Coverage Status](https://coveralls.io/repos/github/urielkelman/tp3-sistemas-distribuidos/badge.svg?branch=master&service=github)](https://coveralls.io/github/urielkelman/tp3-sistemas-distribuidos?branch=master)
+
 [Breve documentación del tp](Documentacion.pdf)
 
 Instrucciones para correrlo:
