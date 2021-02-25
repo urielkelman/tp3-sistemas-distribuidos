@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Dict
 from multiprocessing import Queue
+from queue import Empty
 
 from tp2_utils_package.tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 
@@ -11,6 +12,7 @@ class NodeBehaviour:
     CONNECTION_LAYER = "CONNECTION"
     ACK_MESSAGE = "ACK"
     BULLY_LAYER = "BULLY"
+    QUEUE_TIMEOUT = 0.1
 
     def __init__(self, connections: Dict[int, socket.socket], bully_leader_election: BullyLeaderElection,
                  incoming_messages_queue: Queue, outcoming_messages_queues: Dict[int, Queue]):
@@ -39,13 +41,12 @@ class NodeBehaviour:
         }
 
     def _check_for_incoming_messages(self):
-        # TODO: This is not reliable. Set a timeout.
-        print(self._incoming_messages_queue.empty())
-        while not self._incoming_messages_queue.empty():
-            received_message = self._incoming_messages_queue.get()
-            print(received_message)
+        try:
+            received_message = self._incoming_messages_queue.get(timeout=self.QUEUE_TIMEOUT)
             message = self._bully_leader_election.receive_message(received_message["message"])
             if message:
                 self._outcoming_messages_queues[received_message["host_id"]].put(message)
             else:
                 self._outcoming_messages_queues[received_message["host_id"]].put(self._generate_ack_message())
+        except Empty:
+            pass
