@@ -4,7 +4,8 @@ COPY requirements.txt .
 COPY requirements-travis.txt .
 COPY .coveralls.yml .
 COPY .coveragerc .
+COPY .git .
+COPY __init__.py .
 RUN pip install -r requirements.txt
 RUN pip install -r requirements-travis.txt
-RUN export PYTHONPATH="${PYTHONPATH}:tp2_utils_package"
-CMD pytest --cov=. tp2_utils_package && coveralls
+CMD  export PYTHONPATH="${PYTHONPATH}:tp2_utils_package" && pytest --cov=. && coveralls
