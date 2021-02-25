@@ -78,6 +78,21 @@ class TestReplicaBehaviour(unittest.TestCase):
                                                   self.incoming_messages_queue,
                                                   {2: self.outcoming_messages_queue})
 
+    def set_up_two_nodes_use_second(self, port) -> None:
+        self.incoming_messages_queue = Queue()
+        other_bully_process = Process(target=self._launch_process_with_bully,
+                                      args=(port, 1, [1, 2], self.incoming_messages_queue, None,))
+        other_bully_process.start()
+
+        connection = self._establish_socket_connection("localhost", self.TEST_PORT_1)
+
+        self.outcoming_messages_queue = Queue()
+
+        self.bully_leader_election = BullyLeaderElection(2, [1, 2])
+        self.replica_behaviour = ReplicaBehaviour({1: connection}, self.bully_leader_election,
+                                                  self.incoming_messages_queue,
+                                                  {1: self.outcoming_messages_queue})
+
     def test_one_node_initialization(self):
         bully_leader_election = BullyLeaderElection(1, [1])
         replica_behaviour = ReplicaBehaviour({}, bully_leader_election, Queue(), {})
@@ -94,23 +109,12 @@ class TestReplicaBehaviour(unittest.TestCase):
         self.connection.close()
 
     def test_initialization_of_bigger_node(self):
-        incoming_messages_queue = Queue()
-        other_bully_process = Process(target=self._launch_process_with_bully,
-                                      args=(self.TEST_PORT_1, 1, [1, 2], incoming_messages_queue, None,))
-        other_bully_process.start()
+        self.set_up_two_nodes_use_second(self.TEST_PORT_1)
+        self.replica_behaviour.execute_tasks()
 
-        connection = self._establish_socket_connection("localhost", self.TEST_PORT_1)
+        response_to_leader_message = self.outcoming_messages_queue.get()
 
-        outcoming_messages_queue = Queue()
-
-        bully_leader_election = BullyLeaderElection(2, [1, 2])
-        replica_behaviour = ReplicaBehaviour({1: connection}, bully_leader_election, incoming_messages_queue,
-                                             {1: outcoming_messages_queue})
-        replica_behaviour.execute_tasks()
-
-        response_to_leader_message = outcoming_messages_queue.get()
-
-        self.assertEqual(bully_leader_election.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election.current_leader(), 2)
         self.assertEqual(response_to_leader_message["message"], "LEADER")
 
     def test_two_nodes_the_second_goes_down_and_the_first_take_the_leadership(self):
@@ -134,13 +138,31 @@ class TestReplicaBehaviour(unittest.TestCase):
         # Node 1 has the leadership. Now, the behaviour receives a message indicating that node 2 has restarted.
         queued_message_semaphore = Semaphore(0)
         restarted_node_process = Process(target=self._launch_process_with_bully,
-                                         args=(self.TEST_PORT_1, 2, [1, 2], self.incoming_messages_queue, queued_message_semaphore,))
+                                         args=(self.TEST_PORT_1, 2, [1, 2], self.incoming_messages_queue,
+                                               queued_message_semaphore,))
         restarted_node_process.start()
         queued_message_semaphore.acquire()
         self.replica_behaviour.execute_tasks()
         self.assertEqual(self.bully_leader_election.current_leader(), 2)
         self.connection.close()
         # We kill the process because if not it loops to the infinity, waiting for jsons.
+        restarted_node_process.terminate()
+
+    def test_two_nodes_the_first_goes_down_and_restarts(self):
+        self.set_up_two_nodes_use_second(self.TEST_PORT_1)
+        self.replica_behaviour.execute_tasks()
+
+        # We know that the second node has the leadership. First node restarts and send an election message.
+        restarted_node_process = Process(target=self._launch_process_with_bully,
+                                         args=(self.TEST_PORT_1, 1, [1, 2], self.incoming_messages_queue, None,))
+        restarted_node_process.start()
+
+        self.replica_behaviour.execute_tasks()
+
+        response_to_leader_message = self.outcoming_messages_queue.get()
+
+        self.assertEqual(self.bully_leader_election.current_leader(), 2)
+        self.assertEqual(response_to_leader_message["message"], "LEADER")
         restarted_node_process.terminate()
 
     def tearDown(self) -> None:
