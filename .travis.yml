@@ -5,11 +5,4 @@ python:
   - 3.8
 before_install:
   - df -h
-  - docker-compose -f docker-compose-test.yml up -d
-  - python --version
-  - pip install -r requirements.txt
-  - pip install -r requirements-travis.txt
-  - export PYTHONPATH="${PYTHONPATH}:tp2_utils_package"
-script: pytest --cov=.
-after_success:
-  - coveralls
+script: make test
