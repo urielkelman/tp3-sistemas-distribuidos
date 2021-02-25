@@ -39,9 +39,12 @@ class NodeBehaviour:
         }
 
     def _check_for_incoming_messages(self):
+        # TODO: This is not reliable. Set a timeout.
+        print(self._incoming_messages_queue.empty())
         while not self._incoming_messages_queue.empty():
             received_message = self._incoming_messages_queue.get()
-            message = self._bully_leader_election.receive_message(received_message)
+            print(received_message)
+            message = self._bully_leader_election.receive_message(received_message["message"])
             if message:
                 self._outcoming_messages_queues[received_message["host_id"]].put(message)
             else:

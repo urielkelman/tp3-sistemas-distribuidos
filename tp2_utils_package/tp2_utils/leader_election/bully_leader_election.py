@@ -16,6 +16,7 @@ class BullyLeaderElection:
         self._other_processes_number = all_processes_number
         self._current_leader = -1
         self._empty_responses_to_be_leader = -1
+        self._is_running_election = False
 
     def _generate_election_message(self, destination_process: int) -> Dict:
         """
@@ -60,7 +61,8 @@ class BullyLeaderElection:
         """
         Returns a list with all the messages to be sent to other processes at the start of an election.
         """
-        self._current_leader = -1
+        assert self._current_leader == -1
+        self._is_running_election = True
         election_messages = [self._generate_election_message(destination_process) for destination_process in
                              self._other_processes_number if destination_process > self._process_number]
         self._empty_responses_to_be_leader = len(election_messages)
@@ -69,19 +71,23 @@ class BullyLeaderElection:
 
         return election_messages
 
-    def receive_message(self, message: Dict) -> Optional[List[Dict]]:
+    def receive_message(self, message: Dict) -> Optional[Dict]:
         """
         Processes a message and returns a list of messages to respond.
         :param message: the message to process.
         """
         assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
-            messages = [self._generate_ok_message(message["origin_process_number"])]
-            if self._current_leader != -1:
-                messages += [self.start_election()]
-            return messages
+            if self._current_leader == self._process_number:
+                return self._generate_leader_message(message["origin_process_number"])
+            elif not self._is_running_election:
+                self._current_leader = -1
+            return self._generate_ok_message(message["origin_process_number"])
         elif message["message"] == LEADER_MESSAGE:
             self._current_leader = message["origin_process_number"]
+            self._is_running_election = False
+        else:
+            self._is_running_election = False
 
     def notify_message_not_delivered(self, message: Dict) -> Optional[List[Dict]]:
         """
@@ -92,6 +98,12 @@ class BullyLeaderElection:
             self._empty_responses_to_be_leader -= 1
             if not self._empty_responses_to_be_leader:
                 return self._become_leader()
+
+    def notify_leader_down(self):
+        """
+        Method to invoke when the top layer realizes that the leader node is down.
+        """
+        self._current_leader = -1
 
     def current_leader(self) -> int:
         """

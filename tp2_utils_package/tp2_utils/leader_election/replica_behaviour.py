@@ -40,7 +40,7 @@ class ReplicaBehaviour(NodeBehaviour):
                 finish_sending = True
                 connection.close()
 
-            except (socket.timeout, socket.gaierror, ConnectionRefusedError):
+            except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
                 if not retry_connection:
                     self._bully_leader_election.notify_message_not_delivered(message)
                     finish_sending = True
@@ -53,21 +53,25 @@ class ReplicaBehaviour(NodeBehaviour):
         for election_message in election_messages:
             self._send_message(election_message["destination_process_number"], election_message, retry_connection)
 
-    def _check_leader_connection(self) -> bool:
+    def _check_leader_connection(self):
         """
         Checks if the connection with the leader is open. Returns True if the connections is open, False otherwise.
         """
         leader_id = self._bully_leader_election.current_leader()
-        try:
-            JsonSender.send_json(self._connections[leader_id], self._generate_ack_message())
-            response = JsonReceiver.receive_json(self._connections)
-            logging.info("Received ACK from leader: {}".format(response["host_id"]))
-            return True
-        except (socket.timeout, socket.gaierror, ConnectionRefusedError):
-            logging.info("Connection with leader: {} is lost".format(leader_id))
-            return False
+        if leader_id != -1 and leader_id != self._bully_leader_election.get_id():
+            try:
+                JsonSender.send_json(self._connections[leader_id], self._generate_ack_message())
+                response = JsonReceiver.receive_json(self._connections)
+                logging.info("Received ACK from leader: {}".format(response["host_id"]))
+            except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
+                logging.info("Connection with leader: {} is lost".format(leader_id))
+                self._bully_leader_election.notify_leader_down()
+
+    def b(self):
+        return self._bully_leader_election
 
     def execute_tasks(self):
-        if self._bully_leader_election.current_leader() == -1 or not self._check_leader_connection():
+        self._check_leader_connection()
+        if self._bully_leader_election.current_leader() == -1:
             self._send_election_messages()
         self._check_for_incoming_messages()
