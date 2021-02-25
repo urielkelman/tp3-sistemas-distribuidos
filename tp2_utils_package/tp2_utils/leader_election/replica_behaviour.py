@@ -67,9 +67,6 @@ class ReplicaBehaviour(NodeBehaviour):
                 logging.info("Connection with leader: {} is lost".format(leader_id))
                 self._bully_leader_election.notify_leader_down()
 
-    def b(self):
-        return self._bully_leader_election
-
     def execute_tasks(self):
         self._check_leader_connection()
         if self._bully_leader_election.current_leader() == -1:

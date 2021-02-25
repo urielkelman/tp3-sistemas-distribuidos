@@ -41,12 +41,13 @@ class NodeBehaviour:
         }
 
     def _check_for_incoming_messages(self):
-        try:
-            received_message = self._incoming_messages_queue.get(timeout=self.QUEUE_TIMEOUT)
-            message = self._bully_leader_election.receive_message(received_message["message"])
-            if message:
-                self._outcoming_messages_queues[received_message["host_id"]].put(message)
-            else:
-                self._outcoming_messages_queues[received_message["host_id"]].put(self._generate_ack_message())
-        except Empty:
-            pass
+        while 1:
+            try:
+                received_message = self._incoming_messages_queue.get(timeout=self.QUEUE_TIMEOUT)
+                message = self._bully_leader_election.receive_message(received_message["message"])
+                if message:
+                    self._outcoming_messages_queues[received_message["host_id"]].put(message)
+                else:
+                    self._outcoming_messages_queues[received_message["host_id"]].put(self._generate_ack_message())
+            except Empty:
+                return
