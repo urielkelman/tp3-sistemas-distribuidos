@@ -70,7 +70,13 @@ class RabbitQueueConsumerProducer:
                 RabbitQueueConsumerProducer.logger.exception("Exception while sending message")
             ch.basic_nack(delivery_tag=method.delivery_tag)
             raise e
-        callable_commiter.commit()
+        try:
+            callable_commiter.commit()
+        except Exception as e:
+            if RabbitQueueConsumerProducer.logger:
+                RabbitQueueConsumerProducer.logger.exception("Exception while commiting")
+            ch.basic_nack(delivery_tag=method.delivery_tag)
+            raise e
         ch.basic_ack(delivery_tag=method.delivery_tag)
         if stop_consuming:
             if RabbitQueueConsumerProducer.logger:

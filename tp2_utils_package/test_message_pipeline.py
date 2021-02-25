@@ -1,4 +1,6 @@
 import unittest
+import shutil
+import os
 
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
@@ -18,6 +20,18 @@ from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 
 
 class TestDiskMessagePipeline(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.dirs_to_delete = []
+
+    def tearDown(self) -> None:
+        for l in self.dirs_to_delete:
+            shutil.rmtree(l, ignore_errors=True)
+
+    def _self_register_dir(self, location):
+        shutil.rmtree(location, ignore_errors=True)
+        os.mkdir(location)
+        self.dirs_to_delete.append(location)
 
     def test_simple_filter(self):
         filter_op = Filter(filter_by="value", keep_cond=lambda x: x % 2 == 0)
@@ -276,3 +290,150 @@ class TestDiskMessagePipeline(unittest.TestCase):
                          ([BroadcastMessage(WINDOW_END_MESSAGE),
                            BroadcastMessage(WINDOW_END_MESSAGE),
                            BroadcastMessage(WINDOW_END_MESSAGE)], True))
+
+    def test_recover_complex_pipe(self):
+        self._self_register_dir('/tmp/datapath')
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+
+    def test_recover_complex_pipe(self):
+        self._self_register_dir('/tmp/datapath')
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "A", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 2, "comment": "test", "time": 0.2}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "A", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 1, "comment": "test", "time": -0.2}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "Z", "value": 0, "comment": "test", "time": 0.1}), ([], False))
+        pipe.commit()
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare({"key": "A", "value": 0, "comment": "test", "time": -0.1}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test", "time": 0.0}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test2", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "B", "value": 2, "comment": "test3", "time": 0.5}), ([], False))
+        self.assertEqual(pipe.prepare({"key": "C", "value": 7, "comment": "test", "time": 0.0}), ([], False))
+        pipe.commit()
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
+                                Operation.factory("GroupBy", group_by="key", aggregates=[
+                                    GroupAggregate.factory("Count"),
+                                    GroupAggregate.factory("Sum", "value"),
+                                    GroupAggregate.factory("ValueUnique", "comment"),
+                                    GroupAggregate.factory("Mean", "time"),
+                                ]),
+                                Operation.factory("Filter", "value_sum", lambda x: x > 5)],
+                               stop_at_window_end=True, data_path='/tmp/datapath')
+        self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
+                         ([{"key": "B", "count": 4, "value_sum": 8, "comment_is_unique": False, "time_mean": 0.25},
+                           {"key": "C", "count": 1, "value_sum": 7, "comment_is_unique": True, "time_mean": 0.0},
+                           BroadcastMessage(WINDOW_END_MESSAGE)], True))
+        pipe.commit()
+

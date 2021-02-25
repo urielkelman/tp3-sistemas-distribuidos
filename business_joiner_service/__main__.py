@@ -3,7 +3,7 @@ import pickle
 import socket
 from functools import partial
 from multiprocessing import Process
-
+from pathlib import Path
 from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
@@ -22,7 +22,7 @@ rabbit_host = os.getenv('RABBIT_HOST')
 
 def wait_for_file_ready(item):
     if item == WINDOW_END_MESSAGE:
-        open(BUSINESSES_READY_PATH, "wb")
+        Path(BUSINESSES_READY_PATH).touch()
         return [], True
     return [], False
 

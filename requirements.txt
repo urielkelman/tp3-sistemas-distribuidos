@@ -1,2 +1,4 @@
 ./tp2_utils_package
 PyYAML==5.3.1
+numpy==1.20.1
+dill==0.3.3

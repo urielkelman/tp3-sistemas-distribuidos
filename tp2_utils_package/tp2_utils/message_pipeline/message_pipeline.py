@@ -4,7 +4,8 @@ from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
 from tp2_utils.interfaces.state_commiter import StateCommiter
 import os
 import re
-import pickle
+import dill
+from pathlib import Path
 
 
 WINDOW_END_MESSAGE = {}
@@ -51,9 +52,10 @@ class MessagePipeline(StateCommiter):
         Flushes all the state
         """
         if self.data_path:
-            open(FLUSH_INDICATOR % self.data_path)
+            Path(FLUSH_INDICATOR % self.data_path).touch()
             for f in os.listdir(self.data_path):
-                os.remove("%s/%s" % (self.data_path, f))
+                if f != "FLUSH":
+                    os.remove("%s/%s" % (self.data_path, f))
         if self.idempotency_set:
             self.idempotency_set.flush()
         self.recover_state()
@@ -76,7 +78,7 @@ class MessagePipeline(StateCommiter):
             self.commit_number += 1
         if self.data_path:
             with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number), 'wb') as commit_file:
-                pickle.dump(self.operations, commit_file)
+                dill.dump(self.operations, commit_file)
             if (self.commit_number > COMMITS_TO_KEEP and
                 os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))):
                 os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))
@@ -122,12 +124,15 @@ class MessagePipeline(StateCommiter):
             for cn in sorted_commits:
                 try:
                     with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'rb') as commit_file:
-                        self.operations = pickle.load(commit_file)
+                        self.operations = dill.load(commit_file)
                 except Exception:
                     continue
                 self.commit_number = cn
                 if self.idempotency_set:
-                    self.idempotency_set.recover_state(self.commit_number)
+                    try:
+                        self.idempotency_set.recover_state(self.commit_number)
+                    except Exception as e:
+                        raise e
                 break
         else:
             if self.idempotency_set:

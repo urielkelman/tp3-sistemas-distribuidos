@@ -1,11 +1,11 @@
-from typing import Any, NoReturn, Optional
+from typing import Any, NoReturn, Optional, Tuple, Any
 import base64
 import os
 import pickle
-import glob
 import pyhash
 import json
 import re
+import shutil
 
 message = "Python is fun"
 message_bytes = message.encode('ascii')
@@ -23,6 +23,7 @@ ADDED_HASH = "@ADDED_HASH@%d_%d@\n"
 ADDED_HASH_REGEX = "@ADDED_HASH@(\d+)_(\d+)@"
 SETS_PATH = "%s/sets"
 BUCKET_PATH = "%s/%d.%d"
+SAFE_BACKUP_END = ".copy"
 LINE_BREAK = '\n'
 ADD_LRU = 5000
 CONTAINS_CACHE_SIZE = 5000
@@ -31,9 +32,37 @@ RESET_LOG_EACH_K_COMMITS = 20
 
 
 class DiskMessageSet(MessageSet):
-    def _get_write_bucket_file(self, hash0):
+    def _safe_pickle_dump(self, obj, path):
+        if os.path.exists(path):
+            shutil.copy2(path, path+SAFE_BACKUP_END)
+        with open(path, "wb") as dumpfile:
+            pickle.dump(obj, dumpfile)
+
+    def _safe_pickle_load(self, path) -> Tuple[bool, Any]:
+        result = None
+        try:
+            if os.path.exists(path):
+                with open(path, "rb") as dumpfile:
+                    result = pickle.load(dumpfile)
+        except Exception:
+            try:
+                if os.path.exists(path + SAFE_BACKUP_END):
+                    with open(path, "rb") as dumpfile:
+                        result = pickle.load(dumpfile)
+            except Exception:
+                pass
+        if result != None:
+            return True, result
+        else:
+            return False, None
+        
+    def _get_last_bucket_file(self, hash0):
         if hash0 not in self.bucket_numbers:
-            self.bucket_numbers[hash0] = 0
+            return 0
+        return self.bucket_numbers[hash0]
+
+    def _get_write_bucket_file(self, hash0):
+        self.bucket_numbers[hash0] = self._get_last_bucket_file(hash0)
         return BUCKET_PATH % (self.set_data_path, hash0, self.bucket_numbers[hash0])
 
     def _restore_log(self, commit_number: Optional[int] = None):
@@ -58,7 +87,8 @@ class DiskMessageSet(MessageSet):
                 if re.match(ADDED_HASH_REGEX, line[:-1]):
                     set_i, hash_result = re.findall(ADDED_HASH_REGEX, line[:-1])[0]
                     set_i, hash_result = int(set_i), int(hash_result)
-                    self.hashing_sets[set_i].remove(hash_result)
+                    if hash_result in self.hashing_sets[set_i]:
+                        self.hashing_sets[set_i].remove(hash_result)
                 else:
                     try:
                         item=base64.b64decode(line[:-1])
@@ -67,18 +97,17 @@ class DiskMessageSet(MessageSet):
                     item_hashes = [self.hasher(item, seed=i) % self.hash_mod for i in range(len(self.hashing_sets))]
                     if item_hashes[0] not in self.bucket_numbers:
                         continue
-                    for i in range(self.bucket_numbers[item_hashes[0]] + 1):
+                    for i in range(self._get_last_bucket_file(item_hashes[0]) + 1):
                         if os.path.exists(BUCKET_PATH % (self.set_data_path, item_hashes[0], i)):
-                            with open(BUCKET_PATH % (self.set_data_path, item_hashes[0], i), "rb") as set_file:
-                                item_set = pickle.load(set_file)
+                            success, item_set = self._safe_pickle_load(BUCKET_PATH % (self.set_data_path, item_hashes[0], i))
+                            item_set = (item_set if success else set())
                             if item in item_set:
                                 item_set.remove(item)
-                                with open(BUCKET_PATH % (self.set_data_path, item_hashes[0], i), "wb") as set_file:
-                                    pickle.dump(item_set, set_file)
+                                self._safe_pickle_dump(item_set,
+                                                       BUCKET_PATH % (self.set_data_path, item_hashes[0], i))
                                 break
-            # This dump could fail and it would be irrecoverable
-            with open(SETS_PATH % self.set_data_path, "wb") as sets_file:
-                pickle.dump((self.hashing_sets, self.bucket_numbers), sets_file)
+            self._safe_pickle_dump((self.hashing_sets, self.bucket_numbers),
+                                   SETS_PATH % self.set_data_path)
         return actual_cn
 
     def _writeahead_init(self, commit_number: Optional[int] = None):
@@ -115,8 +144,9 @@ class DiskMessageSet(MessageSet):
         :param commit_number: the commit number from which to restore the state
         """
         if os.path.exists(SETS_PATH % self.set_data_path):
-            with open(SETS_PATH % self.set_data_path, "rb") as sets_file:
-                self.hashing_sets, self.bucket_numbers = pickle.load(sets_file)
+            success, item_set = self._safe_pickle_load(SETS_PATH % self.set_data_path)
+            item_set = (item_set if success else ([set() for _ in range(self.number_of_hashes)], {}))
+            self.hashing_sets, self.bucket_numbers = item_set
         else:
             self.hashing_sets = [set() for _ in range(self.number_of_hashes)]
         self.writeahead_log, actual_cn = self._writeahead_init(commit_number)
@@ -140,10 +170,10 @@ class DiskMessageSet(MessageSet):
         for i in range(len(self.hashing_sets)):
             if item_hashes[i] not in self.hashing_sets[i]:
                 return False
-        for i in range(self.bucket_numbers[item_hashes[0]] + 1):
+        for i in range(self._get_last_bucket_file(item_hashes[0]) + 1):
             if os.path.exists(BUCKET_PATH % (self.set_data_path, item_hashes[0], i)):
-                with open(BUCKET_PATH % (self.set_data_path, item_hashes[0], i), "rb") as set_file:
-                    item_set = pickle.load(set_file)
+                success, item_set = self._safe_pickle_load(BUCKET_PATH % (self.set_data_path, item_hashes[0], i))
+                item_set = (item_set if success else set())
                 if item in item_set:
                     self.contains_lru.append(item)
                     return True
@@ -155,14 +185,13 @@ class DiskMessageSet(MessageSet):
         self.writeahead_log.flush()
         item_hashes = [self.hasher(item, seed=i) % self.hash_mod for i in range(len(self.hashing_sets))]
         if os.path.exists(self._get_write_bucket_file(item_hashes[0])):
-            with open(self._get_write_bucket_file(item_hashes[0]), "rb") as set_file:
-                item_set = pickle.load(set_file)
+            success, item_set = self._safe_pickle_load(self._get_write_bucket_file(item_hashes[0]))
+            item_set = (item_set if success else set())
         else:
             item_set = set()
         item_set.update([item])
-        # This dump could fail and it would be irrecoverable
-        with open(self._get_write_bucket_file(item_hashes[0]), "wb") as set_file:
-            pickle.dump(item_set, set_file)
+        self._safe_pickle_dump(item_set,
+                               self._get_write_bucket_file(item_hashes[0]))
         if len(item_set) > BUCKET_FILE_MAX_ITEMS:
             self.bucket_numbers[item_hashes[0]] += 1
         log_hash_count = 0
@@ -195,9 +224,8 @@ class DiskMessageSet(MessageSet):
         if self.prepare_buffer:
             for data in self.prepare_buffer:
                 self._add(data)
-            # This dump could fail and it would be irrecoverable
-            with open(SETS_PATH % self.set_data_path, "wb") as sets_file:
-                pickle.dump((self.hashing_sets, self.bucket_numbers), sets_file)
+            self._safe_pickle_dump((self.hashing_sets, self.bucket_numbers),
+                                   SETS_PATH % self.set_data_path)
         self.writeahead_log.write(END_COMMIT_LINE % self.commit_number)
         self.writeahead_log.flush()
         self.writeahead_log.close()
@@ -215,9 +243,8 @@ class DiskMessageSet(MessageSet):
             os.remove(LOGFILE_PATH % self.set_data_path)
         if os.path.exists(SETS_PATH % self.set_data_path):
             os.remove(SETS_PATH % self.set_data_path)
-        buckets = glob.glob(self.set_data_path + '/*')
-        for b in buckets:
-            os.remove(b)
+        for f in os.listdir(self.set_data_path):
+            os.remove(self.set_data_path + '/' +f)
 
         self.contains_lru = deque(maxlen=CONTAINS_CACHE_SIZE)
         self.add_lru = deque(maxlen=ADD_LRU)
