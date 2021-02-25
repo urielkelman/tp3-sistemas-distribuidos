@@ -40,9 +40,7 @@ while True:
                                          [BUSINESS_NOTIFY_END],
                                          DummyStateCommiter(wait_for_file_ready),
                                          messages_to_group=1)
-        p = Process(target=cp)
-        p.start()
-        p.join()
+        cp()
 
     print("Downloading file")
 
@@ -64,9 +62,7 @@ while True:
                                      [output_joined_queue],
                                      DummyStateCommiter(partial(add_location_to_businesses, business_locations)),
                                      messages_to_group=1000)
-    p = Process(target=cp)
-    p.start()
-    p.join()
+    cp()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((downloader_host, downloader_port))

@@ -104,9 +104,7 @@ while True:
                                      [BUSINESS_NOTIFY_END],
                                      DummyStateCommiter(DataGatherer().gather_business_locations),
                                      messages_to_group=1)
-    p = Process(target=cp)
-    p.start()
-    p.join()
+    cp()
 
     print("Starting download service")
 

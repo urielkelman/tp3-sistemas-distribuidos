@@ -11,6 +11,7 @@ WINDOW_END_MESSAGE = {}
 COMMITS_TO_KEEP = 10
 ROTATING_COMMIT_SAVE_PATH = "%s/%d.pickle"
 ROTATING_COMMIT_REGEX = "(\d+).pickle"
+FLUSH_INDICATOR = "%s/FLUSH"
 
 
 class MessagePipeline(StateCommiter):
@@ -32,31 +33,15 @@ class MessagePipeline(StateCommiter):
         self.operations = operations
         self.idempotency_set = idempotency_set
         self.data_path = data_path
-        available_commits = []
-        if data_path:
-            for f in os.listdir(data_path):
-                if re.match(ROTATING_COMMIT_REGEX, f):
-                    available_commits.append(int(re.findall(ROTATING_COMMIT_REGEX, f)[0]))
-        if available_commits:
-            sorted_commits = sorted(available_commits, reverse=True)
-            for cn in sorted_commits:
-                try:
-                    with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'rb') as commit_file:
-                        self.operations = pickle.load(commit_file)
-                except Exception:
-                    continue
-                self.commit_number = cn
-                if self.idempotency_set:
-                    self.idempotency_set.recover_state(self.commit_number)
-                break
-        else:
-            if self.idempotency_set:
-                self.idempotency_set.recover_state()
-            self.commit_number = 1
+        self.commit_number = 1
         self.ends_to_receive = ends_to_receive
         self.ends_to_send = ends_to_send
         self.ends_received = 0
         self.stop_at_window_end = stop_at_window_end
+        self.flush_at_next_commit = False
+        if self.data_path and os.path.exists(FLUSH_INDICATOR % self.data_path):
+            self.flush()
+        self.recover_state()
 
     def _change_end_to_broadcast(self, responses: List[Dict]) -> List:
         return [BroadcastMessage(item=r) if r == WINDOW_END_MESSAGE else r for r in responses]
@@ -65,14 +50,24 @@ class MessagePipeline(StateCommiter):
         """
         Flushes all the state
         """
+        if self.data_path:
+            open(FLUSH_INDICATOR % self.data_path)
+            for f in os.listdir(self.data_path):
+                os.remove("%s/%s" % (self.data_path, f))
         if self.idempotency_set:
             self.idempotency_set.flush()
+        self.recover_state()
+        if self.data_path:
+            os.remove(FLUSH_INDICATOR % self.data_path)
 
     def commit(self) -> int:
         """
         Commits the prepared changes
         :return: a commit number
         """
+        if self.flush_at_next_commit:
+            self.flush()
+            self.flush_at_next_commit = False
         if self.idempotency_set:
             cn = self.idempotency_set.commit()
             self.commit_number = cn
@@ -107,7 +102,7 @@ class MessagePipeline(StateCommiter):
             if not self.stop_at_window_end:
                 self.ends_to_receive = self.ends_received
                 self.ends_received = 0
-            self.flush()
+            self.flush_at_next_commit = True
             return self._change_end_to_broadcast(items_to_process), self.stop_at_window_end
         return self._change_end_to_broadcast(items_to_process), False
 
@@ -117,4 +112,24 @@ class MessagePipeline(StateCommiter):
 
         :param commit_number: the commit number from which to restore the state
         """
-        return
+        available_commits = []
+        if self.data_path:
+            for f in os.listdir(self.data_path):
+                if re.match(ROTATING_COMMIT_REGEX, f):
+                    available_commits.append(int(re.findall(ROTATING_COMMIT_REGEX, f)[0]))
+        if available_commits:
+            sorted_commits = sorted(available_commits, reverse=True)
+            for cn in sorted_commits:
+                try:
+                    with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'rb') as commit_file:
+                        self.operations = pickle.load(commit_file)
+                except Exception:
+                    continue
+                self.commit_number = cn
+                if self.idempotency_set:
+                    self.idempotency_set.recover_state(self.commit_number)
+                break
+        else:
+            if self.idempotency_set:
+                self.idempotency_set.recover_state()
+            self.commit_number = 1

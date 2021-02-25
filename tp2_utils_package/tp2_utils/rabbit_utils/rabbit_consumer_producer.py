@@ -139,20 +139,22 @@ class RabbitQueueConsumerProducer:
         self.consume_queue = consume_queue
         self.response_queues = response_queues
         self.messages_to_group = messages_to_group
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+        self.publisher_sharding = publisher_sharding
+        self.callable_commiter = callable_commiter
+        self.host = host
+
+    def __call__(self, *args, **kwargs):
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=consume_queue)
-        for resp_queue in response_queues:
-            if publisher_sharding:
-                for shard in publisher_sharding.get_possible_shards():
+        self.channel.queue_declare(queue=self.consume_queue)
+        for resp_queue in self.response_queues:
+            if self.publisher_sharding:
+                for shard in self.publisher_sharding.get_possible_shards():
                     self.channel.queue_declare(queue=PUBLISH_SHARDING_FORMAT % (resp_queue, shard))
             else:
                 self.channel.queue_declare(queue=resp_queue)
-        callable_commiter = partial(self.consume, callable_commiter)
-        self.channel.basic_consume(queue=consume_queue,
+        callable_commiter = partial(self.consume, self.callable_commiter)
+        self.channel.basic_consume(queue=self.consume_queue,
                                    on_message_callback=callable_commiter,
                                    auto_ack=False)
-        self.publisher_sharding = publisher_sharding
-
-    def __call__(self, *args, **kwargs):
         self.channel.start_consuming()

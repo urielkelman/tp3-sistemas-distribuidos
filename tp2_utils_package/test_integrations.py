@@ -101,14 +101,15 @@ class TestIntegrations(unittest.TestCase):
 
         def consume(write_pipe, ch, method, properties, body):
             write_pipe.send(body)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
             if json.loads(body) == WINDOW_END_MESSAGE:
                 ch.stop_consuming()
+                connection.close()
 
         connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         channel = connection.channel()
         channel.basic_consume(queue=final_queue,
-                              on_message_callback=partial(consume, write_pipe),
-                              auto_ack=True)
+                              on_message_callback=partial(consume, write_pipe))
         channel.start_consuming()
 
     def _setup_pipelineA(self):
@@ -341,6 +342,8 @@ class TestIntegrations(unittest.TestCase):
             p.terminate()
         for l in self.dirs_to_delete:
             shutil.rmtree(l, ignore_errors=True)
+        self.channel.close()
+        self.connection.close()
 
     def test_count_pipeline_A_ending_1(self):
         self._setup_pipelineA()
@@ -348,8 +351,11 @@ class TestIntegrations(unittest.TestCase):
                                                                    'pipelineA_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_1[1:]:
-            self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+            try:
+                self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
+            except Exception as e:
+                print(e)
         consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
