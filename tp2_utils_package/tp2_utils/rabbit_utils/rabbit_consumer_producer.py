@@ -159,8 +159,11 @@ class RabbitQueueConsumerProducer:
                     self.channel.queue_declare(queue=PUBLISH_SHARDING_FORMAT % (resp_queue, shard))
             else:
                 self.channel.queue_declare(queue=resp_queue)
-        callable_commiter = partial(self.consume, self.callable_commiter)
-        self.channel.basic_consume(queue=self.consume_queue,
-                                   on_message_callback=callable_commiter,
-                                   auto_ack=False)
-        self.channel.start_consuming()
+        try:
+            callable_commiter = partial(self.consume, self.callable_commiter)
+            self.channel.basic_consume(queue=self.consume_queue,
+                                       on_message_callback=callable_commiter,
+                                       auto_ack=False)
+            self.channel.start_consuming()
+        except Exception as e:
+            print("asd")

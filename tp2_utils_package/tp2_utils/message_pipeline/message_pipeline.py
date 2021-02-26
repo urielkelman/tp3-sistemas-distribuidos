@@ -15,10 +15,17 @@ ROTATING_COMMIT_REGEX = "(\d+).pickle"
 FLUSH_INDICATOR = "%s/FLUSH"
 
 def message_is_end(message) -> bool:
-    return not message or isinstance(message, list)
+    if not message:
+        return True
+    if (len(message.keys())==2
+            and "type" in message
+            and "pipe_signature" in message
+            and message['type']=="END"):
+        return True
+    return False
 
 def signed_end_message(signature):
-    return [signature]
+    return {"type": "END", "pipe_signature": signature}
 
 
 class MessagePipeline(StateCommiter):
@@ -55,9 +62,11 @@ class MessagePipeline(StateCommiter):
 
     def _change_end_to_broadcast(self, responses: List[Dict]) -> List:
         if self.signature:
-            return [BroadcastMessage(item=r) if message_is_end(r) else r for r in responses]
+            return [BroadcastMessage(item=signed_end_message(self.signature))
+                    if message_is_end(r) else r for r in responses]
         else:
-            return [BroadcastMessage(item=WINDOW_END_MESSAGE) if message_is_end(r) else r for r in responses]
+            return [BroadcastMessage(item=WINDOW_END_MESSAGE)
+                    if message_is_end(r) else r for r in responses]
 
     def flush(self) -> NoReturn:
         """
@@ -101,6 +110,9 @@ class MessagePipeline(StateCommiter):
             return [], False
         if message_is_end(item):
             self.ends_received += 1
+            if self.idempotency_set:
+                self.idempotency_set.prepare((item if not message_is_end(item) else WINDOW_END_MESSAGE))
+            item = WINDOW_END_MESSAGE
             if self.ends_received < self.ends_to_receive:
                 return [], False
         items_to_process = [item]
@@ -110,7 +122,7 @@ class MessagePipeline(StateCommiter):
                 new_items_to_process += op.process(item)
             items_to_process = new_items_to_process
         if self.idempotency_set and item:
-            self.idempotency_set.prepare((item if not message_is_end(item) else WINDOW_END_MESSAGE))
+            self.idempotency_set.prepare(item)
         if self.ends_received == self.ends_to_receive:
             items_to_process += [WINDOW_END_MESSAGE] * (self.ends_to_send - 1)
             if not self.stop_at_window_end:

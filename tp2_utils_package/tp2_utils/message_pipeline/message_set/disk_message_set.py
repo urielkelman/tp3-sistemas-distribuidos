@@ -47,6 +47,7 @@ class DiskMessageSet(MessageSet):
         except Exception:
             try:
                 if os.path.exists(path + SAFE_BACKUP_END):
+                    shutil.copy2(path + SAFE_BACKUP_END, path)
                     with open(path, "rb") as dumpfile:
                         result = pickle.load(dumpfile)
             except Exception:

@@ -342,6 +342,8 @@ class TestIntegrations(unittest.TestCase):
             p.terminate()
         for l in self.dirs_to_delete:
             shutil.rmtree(l, ignore_errors=True)
+        for q in self.queues_to_purge:
+            self.channel.queue_purge(q)
         self.channel.close()
         self.connection.close()
 

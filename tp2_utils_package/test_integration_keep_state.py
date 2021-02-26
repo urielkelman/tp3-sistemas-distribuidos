@@ -328,6 +328,8 @@ class TestIntegrations(unittest.TestCase):
                 else:
                     count_result[resp['key']] = resp['count']
             self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+            for q in self.queues_to_purge:
+                self.channel.queue_purge(q)
         chaos_monkey_p.terminate()
 
     def setUp(self) -> None:
@@ -357,3 +359,7 @@ class TestIntegrations(unittest.TestCase):
             p[0].terminate()
         for l in self.dirs_to_delete:
             shutil.rmtree(l, ignore_errors=True)
+        for q in self.queues_to_purge:
+            self.channel.queue_purge(q)
+        self.channel.close()
+        self.connection.close()
