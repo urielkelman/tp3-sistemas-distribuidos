@@ -29,9 +29,8 @@ class NodeBehaviour:
         self._incoming_messages_queue = incoming_messages_queue
         self._outcoming_messages_queues = outcoming_messages_queues
 
-    @abstractmethod
     def execute_tasks(self):
-        pass
+        self._check_for_incoming_messages()
 
     def _generate_bully_message(self, message):
         return {
@@ -53,7 +52,8 @@ class NodeBehaviour:
                 received_message = self._incoming_messages_queue.get(timeout=self.QUEUE_TIMEOUT)
                 message = self._bully_leader_election.receive_message(received_message["message"])
                 if message:
-                    self._outcoming_messages_queues[received_message["host_id"]].put(self._generate_bully_message(message))
+                    self._outcoming_messages_queues[received_message["host_id"]].put(
+                        self._generate_bully_message(message))
                 else:
                     self._outcoming_messages_queues[received_message["host_id"]].put(self._generate_ack_message())
             except Empty:

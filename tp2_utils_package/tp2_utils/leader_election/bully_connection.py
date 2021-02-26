@@ -1,4 +1,5 @@
 import socket
+import logging
 
 from multiprocessing import Process, Queue
 from typing import Dict, Tuple
@@ -8,6 +9,7 @@ from tp2_utils.json_utils.json_receiver import JsonReceiver
 from tp2_utils.json_utils.json_sender import JsonSender
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
+from tp2_utils.leader_election.node_behaviour import NodeBehaviour
 
 LISTEN_BACKLOG = 5
 CONNECTION_LAYER = "CONNECTION"
@@ -34,20 +36,29 @@ class BullyConnection:
             "host_id": self._host_id
         }
 
-    def launch_listening_process(self, port, incoming_messages_queue, outcoming_messages_queue):
+    @staticmethod
+    def create_socket(port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(('', port))
         sock.listen(LISTEN_BACKLOG)
         connection, address = sock.accept()
-        while True:
-            message = JsonReceiver.receive_json(connection)
-            if message["layer"] == CONNECTION_LAYER:
-                JsonSender.send_json(connection, self._generate_ack_message())
+        return sock, connection
 
-            elif message["layer"] == BULLY_LAYER:
-                incoming_messages_queue.put(message)
-                response_message = outcoming_messages_queue.get()
-                JsonSender.send_json(connection, response_message)
+    def launch_listening_process(self, port, incoming_messages_queue, outcoming_messages_queue):
+        sock, connection = self.create_socket(port)
+        while True:
+            try:
+                message = JsonReceiver.receive_json(connection)
+                if message["layer"] == CONNECTION_LAYER:
+                    JsonSender.send_json(connection, self._generate_ack_message())
+
+                elif message["layer"] == BULLY_LAYER:
+                    incoming_messages_queue.put(message)
+                    response_message = outcoming_messages_queue.get()
+                    JsonSender.send_json(connection, response_message)
+            except ConnectionResetError:
+                sock.close()
+                sock, connection = self.create_socket(port)
 
     def __init__(self, bully_connections_config: Dict[int, Tuple], lowest_port: int, host_id: int):
         """
@@ -90,8 +101,8 @@ class BullyConnection:
                                                      self._bully_messages_queue, self._bully_response_messages_queues)
                 replica_behaviour.execute_tasks()
             else:
-                replica_behaviour = ReplicaBehaviour(self._sending_connections, self._bully_leader_election,
-                                                     self._bully_messages_queue, self._bully_response_messages_queues)
+                replica_behaviour = NodeBehaviour(self._sending_connections, self._bully_leader_election,
+                                                  self._bully_messages_queue, self._bully_response_messages_queues)
                 replica_behaviour.execute_tasks()
             sleep(3)
 

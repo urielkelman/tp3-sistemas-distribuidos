@@ -27,11 +27,10 @@ class ReplicaBehaviour(NodeBehaviour):
             try:
                 connection = self._connections[host_id]
                 JsonSender.send_json(connection, self._generate_bully_message(message))
-                response = JsonReceiver.receive_json(connection)
+                response = JsonReceiver.receive_json(connection, with_timeout=True)
                 if response["layer"] == self.BULLY_LAYER:
                     self._bully_leader_election.receive_message(response["message"])
                 finish_sending = True
-                connection.close()
 
             except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
                 if not retry_connection:
@@ -51,11 +50,12 @@ class ReplicaBehaviour(NodeBehaviour):
         Checks if the connection with the leader is open. Returns True if the connections is open, False otherwise.
         """
         leader_id = self._bully_leader_election.current_leader()
-        print(leader_id)
+        logging.info(leader_id)
         if leader_id != -1 and leader_id != self._bully_leader_election.get_id():
             try:
                 JsonSender.send_json(self._connections[leader_id], self._generate_ack_message())
-                response = JsonReceiver.receive_json(self._connections[leader_id])
+                logging.info("Message sent.")
+                response = JsonReceiver.receive_json(self._connections[leader_id], with_timeout=True)
                 logging.info("Received ACK from leader: {}".format(response["host_id"]))
             except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
                 logging.info("Connection with leader: {} is lost".format(leader_id))
