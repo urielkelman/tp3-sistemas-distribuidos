@@ -76,6 +76,7 @@ class BullyLeaderElection:
         Processes a message and returns a list of messages to respond.
         :param message: the message to process.
         """
+        print(message)
         assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
             if self._current_leader == self._process_number:

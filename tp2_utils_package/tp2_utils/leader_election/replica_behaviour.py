@@ -1,9 +1,9 @@
 import socket
 import logging
 
-from tp2_utils_package.tp2_utils.leader_election.node_behaviour import NodeBehaviour
-from tp2_utils_package.tp2_utils.json_utils.json_receiver import JsonReceiver
-from tp2_utils_package.tp2_utils.json_utils.json_sender import JsonSender
+from tp2_utils.leader_election.node_behaviour import NodeBehaviour
+from tp2_utils.json_utils.json_receiver import JsonReceiver
+from tp2_utils.json_utils.json_sender import JsonSender
 
 from typing import Dict
 
@@ -15,13 +15,6 @@ logging.basicConfig(
 
 
 class ReplicaBehaviour(NodeBehaviour):
-    def _generate_bully_message(self, message):
-        return {
-            "layer": self.BULLY_LAYER,
-            "message": message,
-            "host_id": self._bully_leader_election.get_id()
-        }
-
     def _send_message(self, host_id: int, message: Dict, retry_connection=False):
         """
         Sends a message to the specified host.
@@ -58,10 +51,11 @@ class ReplicaBehaviour(NodeBehaviour):
         Checks if the connection with the leader is open. Returns True if the connections is open, False otherwise.
         """
         leader_id = self._bully_leader_election.current_leader()
+        print(leader_id)
         if leader_id != -1 and leader_id != self._bully_leader_election.get_id():
             try:
                 JsonSender.send_json(self._connections[leader_id], self._generate_ack_message())
-                response = JsonReceiver.receive_json(self._connections)
+                response = JsonReceiver.receive_json(self._connections[leader_id])
                 logging.info("Received ACK from leader: {}".format(response["host_id"]))
             except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
                 logging.info("Connection with leader: {} is lost".format(leader_id))

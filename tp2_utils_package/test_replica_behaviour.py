@@ -115,7 +115,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         response_to_leader_message = self.outcoming_messages_queue.get()
 
         self.assertEqual(self.bully_leader_election.current_leader(), 2)
-        self.assertEqual(response_to_leader_message["message"], "LEADER")
+        self.assertEqual(response_to_leader_message["message"]["message"], "LEADER")
 
     def test_two_nodes_the_second_goes_down_and_the_first_take_the_leadership(self):
         self.set_up_two_nodes_use_first(self.TEST_PORT_1)
@@ -162,7 +162,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         response_to_leader_message = self.outcoming_messages_queue.get()
 
         self.assertEqual(self.bully_leader_election.current_leader(), 2)
-        self.assertEqual(response_to_leader_message["message"], "LEADER")
+        self.assertEqual(response_to_leader_message["message"]["message"], "LEADER")
         restarted_node_process.terminate()
 
     def test_three_nodes_two_of_them_goes_down_and_restarts(self):
@@ -200,9 +200,9 @@ class TestReplicaBehaviour(unittest.TestCase):
 
         self.assertEqual(bully_leader_election.current_leader(), 3)
         response_message_1 = outcoming_messages_queue_1.get()
-        self.assertEqual(response_message_1["message"], "LEADER")
+        self.assertEqual(response_message_1["message"]["message"], "LEADER")
         response_message_2 = outcoming_messages_queue_2.get()
-        self.assertEqual(response_message_2["message"], "LEADER")
+        self.assertEqual(response_message_2["message"]["message"], "LEADER")
 
     def tearDown(self) -> None:
         TestReplicaBehaviour.TEST_PORT_1 += 1
