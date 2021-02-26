@@ -27,25 +27,25 @@ OPERATION_ARGS = [([], []),
                   ([["Filter", "count", lambda x: x > 2]], [[]])
                   ]
 
-PIPELINE_C_ARGS = [({'ends_to_receive':1, 'ends_to_send':1, 'data_path': '/tmp/datapath1'},
+PIPELINE_C_ARGS = [({'ends_to_receive':1, 'ends_to_send':1, 'data_path': '/tmp/datapath1', 'signature': 'pipe1'},
                     {'host': "localhost", 'consume_queue': 'pipeline_start',
                      'response_queues': ['pipelineC_step1'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
                     ['/tmp/message_set1'],
                     ['key',3]),
-                   ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath2'},
+                   ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath2', 'signature': 'pipe2'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard0',
                      'response_queues': ['pipelineC_step2'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
                     ['/tmp/message_set2'],
                     None),
-                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath3'},
+                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath3', 'signature': 'pipe3'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard1',
                      'response_queues': ['pipelineC_step2'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
                     ['/tmp/message_set3'],
                     None),
-                   ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath4'},
+                   ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath4', 'signature': 'pipe4'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard2',
                      'response_queues': ['pipelineC_step2'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
@@ -153,6 +153,7 @@ class TestIntegrations(unittest.TestCase):
             self._factory_and_start_process(ops_args, process_args)
 
     def _chaos_monkey_process(self, write_chaos):
+        np.random.seed(0)
         chaos_count = 0
         while True:
             chaos_count += 1
@@ -165,9 +166,11 @@ class TestIntegrations(unittest.TestCase):
             p.start()
             write_chaos.send(p.pid)
             self.processes_to_join[i]=(p,self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(2.0, size=1)[0])
+            sleep(np.random.poisson(1, size=1)[0])
 
     def test_without_chaos_monkey(self):
+        random.seed(0)
+
         expected_count = {}
         for i in range(100):
             list_of_elements = []
@@ -202,6 +205,8 @@ class TestIntegrations(unittest.TestCase):
         self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
 
     def test_with_chaos_monkey(self):
+        random.seed(0)
+
         self._setup_pipelineC()
         chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
         chaos_monkey_p.start()
@@ -236,6 +241,93 @@ class TestIntegrations(unittest.TestCase):
             else:
                 count_result[resp['key']] = resp['count']
         self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        chaos_monkey_p.terminate()
+
+    def test_with_chaos_monkey_and_repetitions(self):
+        random.seed(0)
+
+        self._setup_pipelineC()
+        chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
+        chaos_monkey_p.start()
+        expected_count = {}
+        last_list = []
+        for i in range(100):
+            list_of_elements = []
+            for j in range(1000):
+                if not last_list or random.random() > 0.05:
+                    element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                    if element['key'] not in expected_count:
+                        expected_count[element['key']]=1
+                    else:
+                        expected_count[element['key']] += 1
+                    list_of_elements.append(element)
+                else:
+                    list_of_elements.append(random.choice(last_list))
+            self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+                                       body=json.dumps(list_of_elements))
+        self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+                                   body=json.dumps({}))
+        consume_process = Process(target=self._read_process, args=(self.write_pipe,
+                                                                   'pipelineC_result'))
+        consume_process.start()
+        consume_process.join()
+        processed_data = []
+        while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
+            processed_data.append(json.loads(self.recv_pipe.recv()))
+        count_result = {}
+        for resp in processed_data:
+            if resp == WINDOW_END_MESSAGE:
+                continue
+            if isinstance(resp, list):
+                for item in resp:
+                    count_result[item['key']] = item['count']
+            else:
+                count_result[resp['key']] = resp['count']
+        self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        chaos_monkey_p.terminate()
+
+    def test_with_chaos_monkey_multiple_streams(self):
+        random.seed(0)
+
+        self._setup_pipelineC()
+        chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
+        chaos_monkey_p.start()
+        for _ in range(100):
+            expected_count = {}
+            last_list = []
+            for i in range(20):
+                list_of_elements = []
+                for j in range(100):
+                    if not last_list or random.random() > 0.05:
+                        element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                        if element['key'] not in expected_count:
+                            expected_count[element['key']]=1
+                        else:
+                            expected_count[element['key']] += 1
+                        list_of_elements.append(element)
+                    else:
+                        list_of_elements.append(random.choice(last_list))
+                self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+                                           body=json.dumps(list_of_elements))
+            self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+                                       body=json.dumps({}))
+            consume_process = Process(target=self._read_process, args=(self.write_pipe,
+                                                                       'pipelineC_result'))
+            consume_process.start()
+            consume_process.join()
+            processed_data = []
+            while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
+                processed_data.append(json.loads(self.recv_pipe.recv()))
+            count_result = {}
+            for resp in processed_data:
+                if resp == WINDOW_END_MESSAGE:
+                    continue
+                if isinstance(resp, list):
+                    for item in resp:
+                        count_result[item['key']] = item['count']
+                else:
+                    count_result[resp['key']] = resp['count']
+            self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
         chaos_monkey_p.terminate()
 
     def setUp(self) -> None:

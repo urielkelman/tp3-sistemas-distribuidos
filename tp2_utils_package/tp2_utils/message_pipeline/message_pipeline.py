@@ -14,13 +14,20 @@ ROTATING_COMMIT_SAVE_PATH = "%s/%d.pickle"
 ROTATING_COMMIT_REGEX = "(\d+).pickle"
 FLUSH_INDICATOR = "%s/FLUSH"
 
+def message_is_end(message) -> bool:
+    return not message or isinstance(message, list)
+
+def signed_end_message(signature):
+    return [signature]
+
 
 class MessagePipeline(StateCommiter):
     def __init__(self, operations: List['Operation'],
                  data_path: Optional[str] = None,
                  idempotency_set: Optional[MessageSet] = None,
                  ends_to_receive: int = 1, ends_to_send: int = 1,
-                 stop_at_window_end: bool = False):
+                 stop_at_window_end: bool = False,
+                 signature: Optional[str] = None):
         """
 
         :param operations: the operations to use in the pipeline
@@ -29,6 +36,7 @@ class MessagePipeline(StateCommiter):
         :param ends_to_receive: the ends to receive for consider that the stream ended
         :param ends_to_send: the ends to send when stream ends
         :param stop_at_window_end: if stop the consumer or not when the stream ends
+        :param signature: signature for the end message
         """
         super().__init__()
         self.operations = operations
@@ -40,12 +48,16 @@ class MessagePipeline(StateCommiter):
         self.ends_received = 0
         self.stop_at_window_end = stop_at_window_end
         self.flush_at_next_commit = False
+        self.signature = signature
         if self.data_path and os.path.exists(FLUSH_INDICATOR % self.data_path):
             self.flush()
         self.recover_state()
 
     def _change_end_to_broadcast(self, responses: List[Dict]) -> List:
-        return [BroadcastMessage(item=r) if r == WINDOW_END_MESSAGE else r for r in responses]
+        if self.signature:
+            return [BroadcastMessage(item=r) if message_is_end(r) else r for r in responses]
+        else:
+            return [BroadcastMessage(item=WINDOW_END_MESSAGE) if message_is_end(r) else r for r in responses]
 
     def flush(self) -> NoReturn:
         """
@@ -87,7 +99,7 @@ class MessagePipeline(StateCommiter):
     def prepare(self, item: Dict) -> Tuple[List, bool]:
         if self.idempotency_set and item and item in self.idempotency_set:
             return [], False
-        if item == WINDOW_END_MESSAGE:
+        if message_is_end(item):
             self.ends_received += 1
             if self.ends_received < self.ends_to_receive:
                 return [], False
@@ -98,7 +110,7 @@ class MessagePipeline(StateCommiter):
                 new_items_to_process += op.process(item)
             items_to_process = new_items_to_process
         if self.idempotency_set and item:
-            self.idempotency_set.prepare(item)
+            self.idempotency_set.prepare((item if not message_is_end(item) else WINDOW_END_MESSAGE))
         if self.ends_received == self.ends_to_receive:
             items_to_process += [WINDOW_END_MESSAGE] * (self.ends_to_send - 1)
             if not self.stop_at_window_end:
