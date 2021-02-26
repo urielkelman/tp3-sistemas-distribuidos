@@ -39,3 +39,7 @@ class StateCommiter:
 
         :param commit_number: the commit number from which to restore the state
         """
+
+    @abstractmethod
+    def commit_done_cleanup(self):
+        pass

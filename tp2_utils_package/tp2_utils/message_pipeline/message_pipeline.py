@@ -88,9 +88,6 @@ class MessagePipeline(StateCommiter):
         Commits the prepared changes
         :return: a commit number
         """
-        if self.flush_at_next_commit:
-            self.flush()
-            self.flush_at_next_commit = False
         if self.idempotency_set:
             cn = self.idempotency_set.commit()
             self.commit_number = cn
@@ -162,3 +159,8 @@ class MessagePipeline(StateCommiter):
             if self.idempotency_set:
                 self.idempotency_set.recover_state()
             self.commit_number = 1
+
+    def commit_done_cleanup(self):
+        if self.flush_at_next_commit:
+            self.flush()
+            self.flush_at_next_commit = False

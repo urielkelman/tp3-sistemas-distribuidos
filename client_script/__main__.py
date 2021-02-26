@@ -6,6 +6,7 @@ from multiprocessing import Process
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.rabbit_producer import RabbitQueueProducer
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 REVIEWS_QUEUE = 'yelp_reviews_news'
 BUSINESSES_QUEUE = 'yelp_businesses_news'
@@ -108,7 +109,7 @@ class DataGatherer:
 
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_50_or_more_reviews',
                                  [],
-                                 DataGatherer(MORE_THAN_50_REVIEWS_PATH).gather_users,
+                                 DummyStateCommiter(DataGatherer(MORE_THAN_50_REVIEWS_PATH).gather_users),
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()
@@ -116,7 +117,7 @@ p.join()
 print_w_timestamp("The result of users with 50 or more reviews are in %s" % MORE_THAN_50_REVIEWS_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_50_or_more_reviews_and_5_stars',
                                  [],
-                                 DataGatherer(MORE_THAN_50_REVIEWS_5_STARS_PATH).gather_users,
+                                 DummyStateCommiter(DataGatherer(MORE_THAN_50_REVIEWS_5_STARS_PATH).gather_users),
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()
@@ -125,7 +126,7 @@ print_w_timestamp(
     "The result of users with 50 or more reviews and all 5 stars are in %s" % MORE_THAN_50_REVIEWS_5_STARS_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_users_5_or_more_reviews_and_same_text',
                                  [],
-                                 DataGatherer(MORE_THAN_5_REVIEWS_SAME_TEXT_PATH).gather_users,
+                                 DummyStateCommiter(DataGatherer(MORE_THAN_5_REVIEWS_SAME_TEXT_PATH).gather_users),
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()
@@ -134,7 +135,7 @@ print_w_timestamp(
     "The result of users with 5 or more reviews and same text are in %s" % MORE_THAN_5_REVIEWS_SAME_TEXT_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_reviews_histogram_finished',
                                  [],
-                                 DataGatherer(DAY_FREQ_PATH).gather_day_freq,
+                                 DummyStateCommiter(DataGatherer(DAY_FREQ_PATH).gather_day_freq),
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()
@@ -142,7 +143,7 @@ p.join()
 print_w_timestamp("Review's counts by day are in %s" % DAY_FREQ_PATH)
 cp = RabbitQueueConsumerProducer(RABBIT_HOST, 'yelp_top_10_funny_cities',
                                  [],
-                                 DataGatherer(FUNNY_CITIES_PATH).gather_funny_cities,
+                                 DummyStateCommiter(DataGatherer(FUNNY_CITIES_PATH).gather_funny_cities),
                                  messages_to_group=1)
 p = Process(target=cp)
 p.start()

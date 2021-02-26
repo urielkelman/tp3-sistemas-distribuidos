@@ -21,7 +21,7 @@ stop:
 
 test:
 	docker-compose -f docker-compose-test.yml up -d
-	docker build --no-cache -f ./test_dockerfile/Dockerfile -t "test_dockerfile:latest" .
+	docker build -f ./test_dockerfile/Dockerfile -t "test_dockerfile:latest" .
 	docker run --network="host" test_dockerfile:latest
 	docker-compose -f docker-compose-test.yml stop
 .PHONY: stop

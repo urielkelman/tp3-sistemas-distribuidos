@@ -36,3 +36,6 @@ class DummyStateCommiter(StateCommiter):
         :param commit_number: the commit number from which to restore the state
         """
         return
+
+    def commit_done_cleanup(self):
+        return

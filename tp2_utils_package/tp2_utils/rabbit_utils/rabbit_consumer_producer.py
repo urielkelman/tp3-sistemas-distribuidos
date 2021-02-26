@@ -78,6 +78,7 @@ class RabbitQueueConsumerProducer:
             ch.basic_nack(delivery_tag=method.delivery_tag)
             raise e
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        callable_commiter.commit_done_cleanup()
         if stop_consuming:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.info("Stopping consumer")
@@ -150,20 +151,22 @@ class RabbitQueueConsumerProducer:
         self.host = host
 
     def __call__(self, *args, **kwargs):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
-        self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.consume_queue)
-        for resp_queue in self.response_queues:
-            if self.publisher_sharding:
-                for shard in self.publisher_sharding.get_possible_shards():
-                    self.channel.queue_declare(queue=PUBLISH_SHARDING_FORMAT % (resp_queue, shard))
-            else:
-                self.channel.queue_declare(queue=resp_queue)
         try:
+            self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+            self.channel = self.connection.channel()
+            self.channel.queue_declare(queue=self.consume_queue)
+            for resp_queue in self.response_queues:
+                if self.publisher_sharding:
+                    for shard in self.publisher_sharding.get_possible_shards():
+                        self.channel.queue_declare(queue=PUBLISH_SHARDING_FORMAT % (resp_queue, shard))
+                else:
+                    self.channel.queue_declare(queue=resp_queue)
             callable_commiter = partial(self.consume, self.callable_commiter)
             self.channel.basic_consume(queue=self.consume_queue,
                                        on_message_callback=callable_commiter,
                                        auto_ack=False)
             self.channel.start_consuming()
         except Exception as e:
-            print("asd")
+            if RabbitQueueConsumerProducer.logger:
+                RabbitQueueConsumerProducer.logger.exception("Exception while starting")
+            raise e

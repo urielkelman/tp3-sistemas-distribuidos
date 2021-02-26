@@ -17,6 +17,9 @@ import random
 from time import sleep
 import numpy as np
 import signal
+import logging
+
+logger = logging.getLogger('root')
 
 DEFAULT_MESSAGES_TO_GROUP = 1000
 
@@ -30,31 +33,31 @@ OPERATION_ARGS = [([], []),
 PIPELINE_C_ARGS = [({'ends_to_receive':1, 'ends_to_send':1, 'data_path': '/tmp/datapath1', 'signature': 'pipe1'},
                     {'host': "localhost", 'consume_queue': 'pipeline_start',
                      'response_queues': ['pipelineC_step1'],
-                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
+                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set1'],
                     ['key',3]),
                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath2', 'signature': 'pipe2'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard0',
                      'response_queues': ['pipelineC_step2'],
-                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
+                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set2'],
                     None),
                     ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath3', 'signature': 'pipe3'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard1',
                      'response_queues': ['pipelineC_step2'],
-                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
+                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set3'],
                     None),
                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath4', 'signature': 'pipe4'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard2',
                      'response_queues': ['pipelineC_step2'],
-                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
+                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set4'],
                     None),
                    ({'ends_to_receive': 3, 'ends_to_send': 1, 'data_path': '/tmp/datapath5'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step2',
                      'response_queues': ['pipelineC_result'],
-                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP},
+                     'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set5'],
                     None)
                    ]
@@ -76,6 +79,7 @@ class TestIntegrations(unittest.TestCase):
     def _self_register_dir(self, location, delete_stuff=True):
         if delete_stuff:
             shutil.rmtree(location, ignore_errors=True)
+        if not os.path.exists(location):
             os.mkdir(location)
         if location not in self.dirs_to_delete:
             self.dirs_to_delete.append(location)
@@ -166,7 +170,7 @@ class TestIntegrations(unittest.TestCase):
             p.start()
             write_chaos.send(p.pid)
             self.processes_to_join[i]=(p,self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(1, size=1)[0])
+            sleep(np.random.poisson(0.5, size=1)[0]+1)
 
     def test_without_chaos_monkey(self):
         random.seed(0)
@@ -241,6 +245,7 @@ class TestIntegrations(unittest.TestCase):
             else:
                 count_result[resp['key']] = resp['count']
         self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
     def test_with_chaos_monkey_and_repetitions(self):
@@ -284,6 +289,7 @@ class TestIntegrations(unittest.TestCase):
             else:
                 count_result[resp['key']] = resp['count']
         self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
     def test_with_chaos_monkey_multiple_streams(self):
@@ -292,7 +298,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_pipelineC()
         chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
         chaos_monkey_p.start()
-        for _ in range(100):
+        for _ in range(30):
             expected_count = {}
             last_list = []
             for i in range(20):
@@ -330,6 +336,7 @@ class TestIntegrations(unittest.TestCase):
             self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
             for q in self.queues_to_purge:
                 self.channel.queue_purge(q)
+        self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
     def setUp(self) -> None:
