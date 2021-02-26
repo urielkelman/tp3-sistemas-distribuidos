@@ -1,6 +1,6 @@
 import unittest
 
-from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 
 
 class TestBullyLeaderElection(unittest.TestCase):

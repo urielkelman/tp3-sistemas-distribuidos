@@ -1,5 +1,6 @@
 import json
 import logging
+import select
 
 BYTES_AMOUNT_REQUEST_SIZE = 20
 SOCKET_TIMEOUT = 4.5
@@ -8,12 +9,18 @@ SOCKET_TIMEOUT = 4.5
 class JsonReceiver:
     @staticmethod
     def _receive_fixed_size(connection, size, with_timeout):
-        logging.info("timeout" + str(connection.timeout))
         if with_timeout:
-            connection.settimeout(SOCKET_TIMEOUT)
+            poller = select.poll()
+            poller.register(connection, select.POLLIN)
+            events = poller.poll(SOCKET_TIMEOUT)
+            logging.info(events)
+            if not events:
+                raise TimeoutError
         buffer = ""
         while len(buffer) < size:
             buffer += connection.recv(size).decode('utf-8')
+            if not buffer:
+                raise TimeoutError
         return buffer
 
     @staticmethod

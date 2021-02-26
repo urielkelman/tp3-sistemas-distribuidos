@@ -10,6 +10,7 @@ from tp2_utils.json_utils.json_sender import JsonSender
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour
+from tp2_utils.leader_election.connection import Connection
 
 LISTEN_BACKLOG = 5
 CONNECTION_LAYER = "CONNECTION"
@@ -18,6 +19,8 @@ ACK_MESSAGE = "ACK"
 
 SOCKET_TIMEOUT = 2
 
+OPEN_CONNECTION = "OPEN"
+
 
 class BullyConnection:
     @staticmethod
@@ -25,7 +28,7 @@ class BullyConnection:
         while True:
             try:
                 connection = socket.create_connection((host, port), timeout=SOCKET_TIMEOUT)
-                return connection
+                return Connection(host, port, connection)
             except ConnectionRefusedError:
                 sleep(1)
 

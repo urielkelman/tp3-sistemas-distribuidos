@@ -6,10 +6,11 @@ import random
 from multiprocessing import Queue, Process, Semaphore
 from typing import List, Optional
 
-from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-from .tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
-from .tp2_utils.json_utils.json_receiver import JsonReceiver
-from .tp2_utils.json_utils.json_sender import JsonSender
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
+from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
+from tp2_utils.json_utils.json_receiver import JsonReceiver
+from tp2_utils.json_utils.json_sender import JsonSender
+from tp2_utils.leader_election.connection import Connection
 
 BULLY_LAYER = "BULLY"
 CONNECTION_LAYER = "CONNECTION"
@@ -65,16 +66,16 @@ class TestReplicaBehaviour(unittest.TestCase):
 
     def set_up_two_nodes_use_first(self, port) -> None:
         self.incoming_messages_queue_1 = Queue()
-        other_bully_process = Process(target=self._launch_process_with_bully,
+        self.other_bully_process = Process(target=self._launch_process_with_bully,
                                       args=(port, 2, [1, 2], self.incoming_messages_queue_1, None,))
-        other_bully_process.start()
+        self.other_bully_process.start()
 
         self.connection = self._establish_socket_connection("localhost", port)
 
         self.outcoming_messages_queue = Queue()
 
         self.bully_leader_election = BullyLeaderElection(1, [1, 2])
-        self.replica_behaviour = ReplicaBehaviour({2: self.connection}, self.bully_leader_election,
+        self.replica_behaviour = ReplicaBehaviour({2: Connection("localhost", port, self.connection)}, self.bully_leader_election,
                                                   self.incoming_messages_queue_1,
                                                   {2: self.outcoming_messages_queue})
 
@@ -89,7 +90,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         self.outcoming_messages_queue = Queue()
 
         self.bully_leader_election = BullyLeaderElection(2, [1, 2])
-        self.replica_behaviour = ReplicaBehaviour({1: connection}, self.bully_leader_election,
+        self.replica_behaviour = ReplicaBehaviour({1: Connection("localhost", self.TEST_PORT_1, connection)}, self.bully_leader_election,
                                                   self.incoming_messages_queue_1,
                                                   {1: self.outcoming_messages_queue})
 
@@ -133,6 +134,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         self.set_up_two_nodes_use_first(self.TEST_PORT_1)
         self.replica_behaviour.execute_tasks()
         self.outcoming_messages_queue.get()
+        self.other_bully_process.terminate()
         self.replica_behaviour.execute_tasks()
 
         # Node 1 has the leadership. Now, the behaviour receives a message indicating that node 2 has restarted.
@@ -180,7 +182,9 @@ class TestReplicaBehaviour(unittest.TestCase):
         outcoming_messages_queue_2 = Queue()
 
         bully_leader_election = BullyLeaderElection(3, [1, 2, 3])
-        replica_behaviour = ReplicaBehaviour({1: connection_1, 2: connection_2}, bully_leader_election,
+        replica_behaviour = ReplicaBehaviour({1: Connection("localhost", self.TEST_PORT_1, connection_1),
+                                              2: Connection("localhost", self.TEST_PORT_2, connection_2)},
+                                             bully_leader_election,
                                              incoming_messages_queue,
                                              {1: outcoming_messages_queue_1, 2: outcoming_messages_queue_2})
 
