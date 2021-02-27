@@ -102,6 +102,8 @@ class DiskMessageSetByLastCommit(MessageSet):
         """
         rn = self.commit_number
         self._safe_pickle_dump(set(self.prepare_buffer), BUCKET_PATH % (self.set_data_path, rn))
+        if os.path.exists(BUCKET_PATH % (self.set_data_path, rn-5)):
+            os.remove(BUCKET_PATH % (self.set_data_path, rn-5))
         self.last_item_set = set(self.prepare_buffer)
         self.prepare_buffer = []
         self.commit_number += 1

@@ -61,6 +61,7 @@ services:
       - tp2_net
     volumes:
       - ./configs:/configs
+      - ./volumes/user_stats_calculator_shard1:/data_volume
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -73,6 +74,7 @@ services:
       - tp2_net
     volumes:
       - ./configs:/configs
+      - ./volumes/user_stats_calculator_shard2:/data_volume
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -85,6 +87,7 @@ services:
       - tp2_net
     volumes:
       - ./configs:/configs
+      - ./volumes/user_stats_calculator_shard3:/data_volume
     depends_on:
       - rabbitmq
     restart: on-failure

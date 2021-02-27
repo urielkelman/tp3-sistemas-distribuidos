@@ -8,6 +8,7 @@ from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate impo
 from tp2_utils.message_pipeline.operations.operation import Operation
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 
 
 class ConsumerProducerServiceConfig(NamedTuple):
@@ -40,7 +41,7 @@ def load_config(config_path: str,
     publisher_sharding = None
     message_set = None
     if 'message_set_params' in config_dict:
-        message_set = DiskMessageSet(**config_dict['message_set_params'])
+        message_set = DiskMessageSetByLastCommit(**config_dict['message_set_params'])
     if 'publisher_sharding' in config_dict:
         publisher_sharding = PublisherSharding(**config_dict['publisher_sharding'])
     for group_aggregate in config_dict['group_aggregates']:

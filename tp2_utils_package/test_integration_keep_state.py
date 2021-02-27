@@ -11,7 +11,6 @@ from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, Mess
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
 from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
-from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 import random
@@ -257,7 +256,7 @@ class TestIntegrations(unittest.TestCase):
         chaos_monkey_p.start()
         expected_count = {}
         last_list = []
-        for i in range(100):
+        for i in range(1000):
             list_of_elements = []
             reppeated_messages = []
             for j in range(1000):
@@ -295,13 +294,11 @@ class TestIntegrations(unittest.TestCase):
         self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
-    def test_with_chaos_monkey_multiple_streams(self):
+    def test_without_chaos_monkey_multiple_streams(self):
         random.seed(0)
 
         self._setup_pipelineC()
-        chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
-        chaos_monkey_p.start()
-        for _ in range(30):
+        for _ in range(100):
             expected_count = {}
             last_list = []
             reppeated_messages = []
@@ -340,8 +337,6 @@ class TestIntegrations(unittest.TestCase):
             self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
             for q in self.queues_to_purge:
                 self.channel.queue_purge(q)
-        self.assertTrue(chaos_monkey_p.is_alive())
-        chaos_monkey_p.terminate()
 
     def setUp(self) -> None:
         try:
