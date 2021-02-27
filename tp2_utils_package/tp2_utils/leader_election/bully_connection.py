@@ -1,5 +1,6 @@
 import socket
 import logging
+import traceback
 
 from multiprocessing import Process, Queue
 from typing import Dict, Tuple
@@ -17,7 +18,7 @@ CONNECTION_LAYER = "CONNECTION"
 BULLY_LAYER = "BULLY"
 ACK_MESSAGE = "ACK"
 
-SOCKET_TIMEOUT = 2
+SOCKET_TIMEOUT = 10
 
 OPEN_CONNECTION = "OPEN"
 
@@ -57,6 +58,7 @@ class BullyConnection:
 
                 elif message["layer"] == BULLY_LAYER:
                     incoming_messages_queue.put(message)
+                    logging.info("Encola")
                     response_message = outcoming_messages_queue.get()
                     JsonSender.send_json(connection, response_message)
             except ConnectionResetError:

@@ -9,18 +9,18 @@ SOCKET_TIMEOUT = 4.5
 class JsonReceiver:
     @staticmethod
     def _receive_fixed_size(connection, size, with_timeout):
-        if with_timeout:
-            poller = select.poll()
-            poller.register(connection, select.POLLIN)
-            events = poller.poll(SOCKET_TIMEOUT)
-            logging.info(events)
-            if not events:
-                raise TimeoutError
+        # if with_timeout:
+        #     poller = select.poll()
+        #     poller.register(connection, select.POLLIN)
+        #     events = poller.poll(SOCKET_TIMEOUT)
+        #     logging.info(events)
+        #     if not events:
+        #         raise TimeoutError
         buffer = ""
         while len(buffer) < size:
             buffer += connection.recv(size).decode('utf-8')
-            if not buffer:
-                raise TimeoutError
+            # if not buffer:
+            #     raise TimeoutError
         return buffer
 
     @staticmethod

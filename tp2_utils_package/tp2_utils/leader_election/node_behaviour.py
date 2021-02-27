@@ -7,6 +7,7 @@ from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
 
 import socket
+import logging
 
 OPEN_CONNECTION = "OPEN"
 CLOSED_CONNECTION = "CLOSED"
@@ -71,6 +72,8 @@ class NodeBehaviour:
         while 1:
             try:
                 received_message = self._incoming_messages_queue.get(timeout=self.QUEUE_TIMEOUT)
+                logging.info("Desencola")
+
                 self._check_connection_status(received_message["host_id"])
                 message = self._bully_leader_election.receive_message(received_message["message"])
                 if message:

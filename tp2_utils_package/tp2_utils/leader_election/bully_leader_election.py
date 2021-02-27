@@ -14,7 +14,7 @@ class BullyLeaderElection:
         """
         self._process_number = process_number
         self._other_processes_number = all_processes_number
-        self._current_leader = -1
+        self._current_leader = max(all_processes_number)
         self._empty_responses_to_be_leader = -1
         self._is_running_election = False
 
@@ -61,8 +61,6 @@ class BullyLeaderElection:
         """
         Returns a list with all the messages to be sent to other processes at the start of an election.
         """
-        assert self._current_leader == -1
-        self._is_running_election = True
         election_messages = [self._generate_election_message(destination_process) for destination_process in
                              self._other_processes_number if destination_process > self._process_number]
         self._empty_responses_to_be_leader = len(election_messages)
@@ -76,7 +74,6 @@ class BullyLeaderElection:
         Processes a message and returns a list of messages to respond.
         :param message: the message to process.
         """
-        print(message)
         assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
             if self._current_leader == self._process_number:

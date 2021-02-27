@@ -47,6 +47,7 @@ class TestReplicaBehaviour(unittest.TestCase):
             sock.listen(5)
             connection, address = sock.accept()
             received_message = JsonReceiver.receive_json(connection)
+            print(received_message)
             response_message = bully_leader_election.receive_message(received_message["message"])
             if response_message:
                 JsonSender.send_json(connection,
