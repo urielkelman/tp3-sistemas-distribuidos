@@ -10,6 +10,7 @@ import pika
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
@@ -86,7 +87,7 @@ class TestIntegrations(unittest.TestCase):
 
     def _setup_message_set(self, location: str, delete_stuff=True):
         self._self_register_dir(location, delete_stuff)
-        message_set = DiskMessageSet(location)
+        message_set = DiskMessageSetByLastCommit(location)
         return message_set
 
     def _setup_start_process(self, func, ops_args, process_args):
@@ -170,7 +171,7 @@ class TestIntegrations(unittest.TestCase):
             p.start()
             write_chaos.send(p.pid)
             self.processes_to_join[i]=(p,self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(0.5, size=1)[0]+1)
+            sleep(np.random.poisson(0.3, size=1)[0]+0.05)
 
     def test_without_chaos_monkey(self):
         random.seed(0)
@@ -215,7 +216,7 @@ class TestIntegrations(unittest.TestCase):
         chaos_monkey_p = Process(target=self._chaos_monkey_process, args=(self.write_chaos,))
         chaos_monkey_p.start()
         expected_count = {}
-        for i in range(100):
+        for i in range(1000):
             list_of_elements = []
             for j in range(1000):
                 element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
@@ -258,6 +259,7 @@ class TestIntegrations(unittest.TestCase):
         last_list = []
         for i in range(100):
             list_of_elements = []
+            reppeated_messages = []
             for j in range(1000):
                 if not last_list or random.random() > 0.05:
                     element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
@@ -267,9 +269,10 @@ class TestIntegrations(unittest.TestCase):
                         expected_count[element['key']] += 1
                     list_of_elements.append(element)
                 else:
-                    list_of_elements.append(random.choice(last_list))
+                    reppeated_messages.append(random.choice(last_list))
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
-                                       body=json.dumps(list_of_elements))
+                                       body=json.dumps(list_of_elements+reppeated_messages))
+            last_list = list_of_elements
         self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                    body=json.dumps({}))
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
@@ -301,6 +304,7 @@ class TestIntegrations(unittest.TestCase):
         for _ in range(30):
             expected_count = {}
             last_list = []
+            reppeated_messages = []
             for i in range(20):
                 list_of_elements = []
                 for j in range(100):
@@ -312,9 +316,9 @@ class TestIntegrations(unittest.TestCase):
                             expected_count[element['key']] += 1
                         list_of_elements.append(element)
                     else:
-                        list_of_elements.append(random.choice(last_list))
+                        reppeated_messages.append(random.choice(last_list))
                 self.channel.basic_publish(exchange='', routing_key='pipeline_start',
-                                           body=json.dumps(list_of_elements))
+                                           body=json.dumps(list_of_elements+reppeated_messages))
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps({}))
             consume_process = Process(target=self._read_process, args=(self.write_pipe,

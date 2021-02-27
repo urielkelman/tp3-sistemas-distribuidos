@@ -141,20 +141,23 @@ class MessagePipeline(StateCommiter):
                 if re.match(ROTATING_COMMIT_REGEX, f):
                     available_commits.append(int(re.findall(ROTATING_COMMIT_REGEX, f)[0]))
         if available_commits:
-            sorted_commits = sorted(available_commits, reverse=True)
-            for cn in sorted_commits:
+            try:
+                with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
+                                                       max(available_commits)),
+                          'rb') as commit_file:
+                    self.operations = dill.load(commit_file)
+                    self.commit_number = max(available_commits)
+            except Exception:
+                with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
+                                                       max(available_commits)-1),
+                          'rb') as commit_file:
+                    self.operations = dill.load(commit_file)
+                    self.commit_number = max(available_commits)-1
+            if self.idempotency_set:
                 try:
-                    with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'rb') as commit_file:
-                        self.operations = dill.load(commit_file)
-                except Exception:
-                    continue
-                self.commit_number = cn
-                if self.idempotency_set:
-                    try:
-                        self.idempotency_set.recover_state(self.commit_number)
-                    except Exception as e:
-                        raise e
-                break
+                    self.idempotency_set.recover_state(self.commit_number)
+                except Exception as e:
+                    raise e
         else:
             if self.idempotency_set:
                 self.idempotency_set.recover_state()

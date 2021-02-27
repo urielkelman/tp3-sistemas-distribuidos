@@ -20,3 +20,9 @@ operations:
 
 message_pipeline:
   - GroupByDay
+
+message_pipeline_kwargs:
+  data_path: /data_volume/message_pipeline
+
+message_set_params:
+  set_data_path: /data_volume/message_set

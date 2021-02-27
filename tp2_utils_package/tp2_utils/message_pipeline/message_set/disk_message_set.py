@@ -34,7 +34,7 @@ RESET_LOG_EACH_K_COMMITS = 20
 class DiskMessageSet(MessageSet):
     def _safe_pickle_dump(self, obj, path):
         if os.path.exists(path):
-            shutil.copy2(path, path+SAFE_BACKUP_END)
+            shutil.copy2(path, path + SAFE_BACKUP_END)
         with open(path, "wb") as dumpfile:
             pickle.dump(obj, dumpfile)
 
@@ -56,7 +56,7 @@ class DiskMessageSet(MessageSet):
             return True, result
         else:
             return False, None
-        
+
     def _get_last_bucket_file(self, hash0):
         if hash0 not in self.bucket_numbers:
             return 0
@@ -92,7 +92,7 @@ class DiskMessageSet(MessageSet):
                         self.hashing_sets[set_i].remove(hash_result)
                 else:
                     try:
-                        item=base64.b64decode(line[:-1])
+                        item = base64.b64decode(line[:-1])
                     except Exception:
                         continue
                     item_hashes = [self.hasher(item, seed=i) % self.hash_mod for i in range(len(self.hashing_sets))]
@@ -100,7 +100,8 @@ class DiskMessageSet(MessageSet):
                         continue
                     for i in range(self._get_last_bucket_file(item_hashes[0]) + 1):
                         if os.path.exists(BUCKET_PATH % (self.set_data_path, item_hashes[0], i)):
-                            success, item_set = self._safe_pickle_load(BUCKET_PATH % (self.set_data_path, item_hashes[0], i))
+                            success, item_set = self._safe_pickle_load(
+                                BUCKET_PATH % (self.set_data_path, item_hashes[0], i))
                             item_set = (item_set if success else set())
                             if item in item_set:
                                 item_set.remove(item)
@@ -245,7 +246,7 @@ class DiskMessageSet(MessageSet):
         if os.path.exists(SETS_PATH % self.set_data_path):
             os.remove(SETS_PATH % self.set_data_path)
         for f in os.listdir(self.set_data_path):
-            os.remove(self.set_data_path + '/' +f)
+            os.remove(self.set_data_path + '/' + f)
 
         self.contains_lru = deque(maxlen=CONTAINS_CACHE_SIZE)
         self.add_lru = deque(maxlen=ADD_LRU)
