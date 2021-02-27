@@ -61,7 +61,6 @@ class BullyLeaderElection:
         """
         Returns a list with all the messages to be sent to other processes at the start of an election.
         """
-        assert self._current_leader == -1
         self._is_running_election = True
         election_messages = [self._generate_election_message(destination_process) for destination_process in
                              self._other_processes_number if destination_process > self._process_number]
@@ -76,12 +75,13 @@ class BullyLeaderElection:
         Processes a message and returns a list of messages to respond.
         :param message: the message to process.
         """
-        print(message)
         assert message["destination_process_number"] == self._process_number
         if message["message"] == ELECTION_MESSAGE:
             if self._current_leader == self._process_number:
                 return self._generate_leader_message(message["origin_process_number"])
             elif not self._is_running_election:
+                import logging
+                logging.info("Set -1!")
                 self._current_leader = -1
             return self._generate_ok_message(message["origin_process_number"])
         elif message["message"] == LEADER_MESSAGE:
