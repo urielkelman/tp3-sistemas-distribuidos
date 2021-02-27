@@ -1,12 +1,9 @@
-from abc import abstractmethod
-from typing import Dict
+import logging
 from multiprocessing import Lock
-from queue import Empty
+from typing import Dict
 
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-
-import socket
-import logging
+from tp2_utils.leader_election.connection import Connection
 
 
 class NodeBehaviour:
@@ -15,7 +12,7 @@ class NodeBehaviour:
     BULLY_LAYER = "BULLY"
     QUEUE_TIMEOUT = 0.1
 
-    def __init__(self, connections: Dict[int, socket.socket], bully_leader_election_dict: Dict[str, BullyLeaderElection],
+    def __init__(self, connections: Dict[int, Connection], bully_leader_election_dict: Dict[str, BullyLeaderElection],
                  bully_leader_election_lock: Lock):
         """
         Instantiates a NodeBehaviour, an abstract class to inherit common node behaviour.

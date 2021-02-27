@@ -63,8 +63,9 @@ class BullyConnection:
         Loops doing the connections tasks. Invoke the appropriate behaviour based on who the current leader is.
         """
         while True:
-            current_leader = self._bully_leader_election_dict['bully'].current_leader()
-            if current_leader != -1 or current_leader != self._host_id:
+            bully_leader_election = self._bully_leader_election_dict["bully"]
+            leader = bully_leader_election.get_current_leader()
+            if leader != -1 or leader != self._host_id:
                 replica_behaviour = ReplicaBehaviour(self._sending_connections, self._bully_leader_election_dict,
                                                      self._bully_leader_election_lock)
                 replica_behaviour.execute_tasks()

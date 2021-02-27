@@ -30,8 +30,10 @@ class BullyMessageReceiver:
 
     def create_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('', self._port))
         sock.listen(LISTEN_BACKLOG)
+        logging.info("Waiting for connections")
         connection, address = sock.accept()
         return sock, connection, address
 
@@ -71,6 +73,7 @@ class BullyMessageReceiver:
 
                     JsonSender.send_json(connection, final_message)
             except (ConnectionResetError, TimeoutError, OSError):
+                logging.exception("Exception in message receiver:")
                 logging.info("Connection with peer {} was reset. Open socket to listen if the node restart.".format(address))
                 sock.close()
                 sock, connection, address = self.create_socket()

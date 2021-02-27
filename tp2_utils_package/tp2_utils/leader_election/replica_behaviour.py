@@ -26,7 +26,7 @@ class ReplicaBehaviour(NodeBehaviour):
             try:
                 connection = self._connections[host_id]
                 JsonSender.send_json(connection, self._generate_bully_message(message))
-                response = JsonReceiver.receive_json(connection, with_timeout=True)
+                response = JsonReceiver.receive_json(connection)
                 if response["layer"] == self.BULLY_LAYER:
                     self._bully_leader_election_lock.acquire()
                     bully_leader_election = self._bully_leader_election_dict["bully"]
@@ -61,21 +61,24 @@ class ReplicaBehaviour(NodeBehaviour):
         Checks all the connections that are open. If the leader connection is down, notifies the bully algorithm.
         """
         bully_leader_election = self._bully_leader_election_dict['bully']
-        leader_id = bully_leader_election.current_leader()
-        logging.info(leader_id)
-        if leader_id != -1 and leader_id != bully_leader_election.get_id():
-            try:
-                JsonSender.send_json(self._connections[leader_id], self._generate_ack_message())
-                JsonReceiver.receive_json(self._connections[leader_id], with_timeout=True)
-            except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
-                logging.exception("Connection with leader: {} is lost".format(leader_id))
-                self._bully_leader_election_lock.acquire()
-                bully_leader_election = self._bully_leader_election_dict["bully"]
-                bully_leader_election.notify_leader_down()
-                self._bully_leader_election_dict["bully"] = bully_leader_election
-                self._bully_leader_election_lock.release()
+        leader_id = bully_leader_election.get_current_leader()
+        logging.info("Actual leader id: " + str(leader_id))
+        hosts_ids = bully_leader_election.get_hosts_ids()
+        for host_id in hosts_ids:
+            if host_id != bully_leader_election.get_id():
+                try:
+                    JsonSender.send_json(self._connections[host_id], self._generate_ack_message())
+                    JsonReceiver.receive_json(self._connections[host_id])
+                except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
+                    if host_id == leader_id:
+                        logging.exception("Connection with leader: {} is lost".format(host_id))
+                        self._bully_leader_election_lock.acquire()
+                        bully_leader_election = self._bully_leader_election_dict["bully"]
+                        bully_leader_election.notify_leader_down()
+                        self._bully_leader_election_dict["bully"] = bully_leader_election
+                        self._bully_leader_election_lock.release()
 
     def execute_tasks(self):
         self._check_connections()
-        if self._bully_leader_election_dict['bully'].current_leader() == -1:
+        if self._bully_leader_election_dict['bully'].get_current_leader() == -1:
             self._send_election_messages()

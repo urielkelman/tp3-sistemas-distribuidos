@@ -37,17 +37,17 @@ class TestBullyLeaderElection(unittest.TestCase):
         bully_leader_election_1.receive_message(bully_2_response)
 
         self.assertEqual(len(bully_start_election_messages_2), 1)
-        self.assertEqual(bully_leader_election_1.current_leader(), 2)
-        self.assertEqual(bully_leader_election_2.current_leader(), 2)
+        self.assertEqual(bully_leader_election_1.get_current_leader(), 2)
+        self.assertEqual(bully_leader_election_2.get_current_leader(), 2)
         self.assertEqual(bully_2_response["message"], "LEADER")
 
     def test_three_nodes(self):
         self.assertEqual(len(self.bully_start_election_messages_1), 2)
         self.assertEqual(len(self.bully_start_election_messages_2), 1)
 
-        self.assertEqual(self.bully_leader_election_1.current_leader(), 3)
-        self.assertEqual(self.bully_leader_election_2.current_leader(), 3)
-        self.assertEqual(self.bully_leader_election_3.current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_1.get_current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_2.get_current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_3.get_current_leader(), 3)
 
     def test_three_nodes_leader_down(self):
         """
@@ -68,8 +68,8 @@ class TestBullyLeaderElection(unittest.TestCase):
         self.bully_leader_election_2.notify_message_not_delivered(new_messages_2[1])
 
         self.assertIsNone(new_messages_1)
-        self.assertEqual(self.bully_leader_election_1.current_leader(), 2)
-        self.assertEqual(self.bully_leader_election_2.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election_1.get_current_leader(), 2)
+        self.assertEqual(self.bully_leader_election_2.get_current_leader(), 2)
 
     def test_three_nodes_two_nodes_down_and_one_starts_again(self):
         """
@@ -91,15 +91,15 @@ class TestBullyLeaderElection(unittest.TestCase):
         new_messages_1 = self.bully_leader_election_1.start_election()
         self.bully_leader_election_1.notify_message_not_delivered(new_messages_1[0])
         self.bully_leader_election_1.notify_message_not_delivered(new_messages_1[1])
-        self.assertEqual(self.bully_leader_election_1.current_leader(), 1)
+        self.assertEqual(self.bully_leader_election_1.get_current_leader(), 1)
 
         # Now, node 2 comes up, and recovers the leadership.
         self.bully_leader_election_2 = BullyLeaderElection(2, [1, 2, 3])
         new_messages_2 = self.bully_leader_election_2.start_election()
         leader_messages = self.bully_leader_election_2.notify_message_not_delivered(new_messages_2[0])
         self.bully_leader_election_1.receive_message(leader_messages[0])
-        self.assertEqual(self.bully_leader_election_1.current_leader(), 2)
-        self.assertEqual(self.bully_leader_election_2.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election_1.get_current_leader(), 2)
+        self.assertEqual(self.bully_leader_election_2.get_current_leader(), 2)
 
     def test_three_nodes_the_second_comes_down_and_starts_again(self):
         # Suppose that the second node came down, so we have to generate a new instance of it. We know node 3 is the leader.
@@ -109,7 +109,7 @@ class TestBullyLeaderElection(unittest.TestCase):
         bully_3_response = self.bully_leader_election_3.receive_message(bully_start_election_messages_2[0])
         self.bully_leader_election_2.receive_message(bully_3_response)
 
-        self.assertEqual(self.bully_leader_election_2.current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_2.get_current_leader(), 3)
         self.assertEqual(bully_3_response["message"], "LEADER")
 
     def test_three_nodes_the_first_comes_down_and_starts_again(self):
@@ -130,9 +130,9 @@ class TestBullyLeaderElection(unittest.TestCase):
 
         self.bully_leader_election_2.receive_message(bully_3_response_2)
 
-        self.assertEqual(self.bully_leader_election_1.current_leader(), 3)
-        self.assertEqual(self.bully_leader_election_2.current_leader(), 3)
-        self.assertEqual(self.bully_leader_election_3.current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_1.get_current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_2.get_current_leader(), 3)
+        self.assertEqual(self.bully_leader_election_3.get_current_leader(), 3)
 
 
 

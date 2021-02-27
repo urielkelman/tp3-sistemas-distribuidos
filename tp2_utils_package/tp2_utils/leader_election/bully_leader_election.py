@@ -106,14 +106,17 @@ class BullyLeaderElection:
         """
         self._current_leader = -1
 
-    def current_leader(self) -> int:
-        """
-        Returns the identifying number of the current registered leader, or -1 if there is not a leader.
-        """
-        return self._current_leader
-
     def get_id(self) -> int:
         """
         Returns the assigned id.
         """
         return self._process_number
+
+    def get_hosts_ids(self) -> List[int]:
+        return self._other_processes_number
+
+    def get_current_leader(self) -> int:
+        """
+        Returns the identifying number of the current registered leader, or -1 if there is not a leader.
+        """
+        return self._current_leader

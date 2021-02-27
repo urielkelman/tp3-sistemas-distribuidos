@@ -98,13 +98,13 @@ class TestReplicaBehaviour(unittest.TestCase):
         replica_behaviour = ReplicaBehaviour({}, bully_leader_election, Queue(), {})
         replica_behaviour.execute_tasks()
 
-        self.assertEqual(bully_leader_election.current_leader(), 1)
+        self.assertEqual(bully_leader_election.get_current_leader(), 1)
 
     def test_initialization_of_lower_node(self):
         self.set_up_two_nodes_use_first(self.TEST_PORT_1)
         self.replica_behaviour.execute_tasks()
         ack_message = self.outcoming_messages_queue.get()
-        self.assertEqual(self.bully_leader_election.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election.get_current_leader(), 2)
         self.assertEqual(ack_message["message"], "ACK")
         self.connection.close()
 
@@ -114,7 +114,7 @@ class TestReplicaBehaviour(unittest.TestCase):
 
         response_to_leader_message = self.outcoming_messages_queue.get()
 
-        self.assertEqual(self.bully_leader_election.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election.get_current_leader(), 2)
         self.assertEqual(response_to_leader_message["message"]["message"], "LEADER")
 
     def test_two_nodes_the_second_goes_down_and_the_first_take_the_leadership(self):
@@ -126,7 +126,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         # execute the replica behaviour again, it should detect that node 2 is down.
         self.replica_behaviour.execute_tasks()
 
-        self.assertEqual(self.bully_leader_election.current_leader(), 1)
+        self.assertEqual(self.bully_leader_election.get_current_leader(), 1)
         self.connection.close()
 
     def test_two_node_the_second_goes_down_and_restarts(self):
@@ -143,7 +143,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         restarted_node_process.start()
         queued_message_semaphore.acquire()
         self.replica_behaviour.execute_tasks()
-        self.assertEqual(self.bully_leader_election.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election.get_current_leader(), 2)
         self.connection.close()
         # We kill the process because if not it loops to the infinity, waiting for jsons.
         restarted_node_process.terminate()
@@ -161,7 +161,7 @@ class TestReplicaBehaviour(unittest.TestCase):
 
         response_to_leader_message = self.outcoming_messages_queue.get()
 
-        self.assertEqual(self.bully_leader_election.current_leader(), 2)
+        self.assertEqual(self.bully_leader_election.get_current_leader(), 2)
         self.assertEqual(response_to_leader_message["message"]["message"], "LEADER")
         restarted_node_process.terminate()
 
@@ -198,7 +198,7 @@ class TestReplicaBehaviour(unittest.TestCase):
         node_restarted_2.start()
         replica_behaviour.execute_tasks()
 
-        self.assertEqual(bully_leader_election.current_leader(), 3)
+        self.assertEqual(bully_leader_election.get_current_leader(), 3)
         response_message_1 = outcoming_messages_queue_1.get()
         self.assertEqual(response_message_1["message"]["message"], "LEADER")
         response_message_2 = outcoming_messages_queue_2.get()
