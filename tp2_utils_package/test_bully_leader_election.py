@@ -1,6 +1,6 @@
 import unittest
 
-from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 
 
 class TestBullyLeaderElection(unittest.TestCase):
@@ -65,7 +65,6 @@ class TestBullyLeaderElection(unittest.TestCase):
         new_messages_2 = self.bully_leader_election_2.notify_message_not_delivered(bully_start_election_messages_2[0])
 
         self.bully_leader_election_1.receive_message(new_messages_2[0])
-        self.bully_leader_election_2.notify_message_not_delivered(new_messages_2[1])
 
         self.assertIsNone(new_messages_1)
         self.assertEqual(self.bully_leader_election_1.get_current_leader(), 2)
@@ -84,7 +83,6 @@ class TestBullyLeaderElection(unittest.TestCase):
         self.bully_leader_election_1.notify_message_not_delivered(bully_start_election_messages_1[1])
         new_messages_2 = self.bully_leader_election_2.notify_message_not_delivered(bully_start_election_messages_2[0])
         self.bully_leader_election_1.receive_message(new_messages_2[0])
-        self.bully_leader_election_2.notify_message_not_delivered(new_messages_2[1])
 
         # Node 2 is now the leader. The connection layer of bully 1 realizes that node 2 is not responding anymore.
         self.bully_leader_election_1.notify_leader_down()
