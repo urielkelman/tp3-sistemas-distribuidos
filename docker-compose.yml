@@ -1,5 +1,53 @@
 version: "3"
 services:
+  monitor_1:
+    container_name: monitor_1
+    image: "monitor_service:latest"
+    entrypoint: python3 /__main__.py
+    environment:
+      - HOSTS_IDS=[2,3,4]
+      - HOSTS_IPS=["monitor_2", "monitor_3", "monitor_4"]
+      - PORTS=[8000,8000,8000]
+      - HOST_ID=1
+    networks:
+      - tp2_net
+
+  monitor_2:
+    container_name: monitor_2
+    image: "monitor_service:latest"
+    entrypoint: python3 /__main__.py
+    environment:
+      - HOSTS_IDS=[1,3,4]
+      - HOSTS_IPS=["monitor_1","monitor_3","monitor_4"]
+      - PORTS=[8000,8001,8001]
+      - HOST_ID=2
+    networks:
+      - tp2_net
+
+  monitor_3:
+    container_name: monitor_3
+    image: "monitor_service:latest"
+    entrypoint: python3 /__main__.py
+    environment:
+      - HOSTS_IDS=[1,2,4]
+      - HOSTS_IPS=["monitor_1","monitor_2","monitor_4"]
+      - PORTS=[8001,8001,8002]
+      - HOST_ID=3
+    networks:
+      - tp2_net
+
+  monitor_4:
+    container_name: monitor_4
+    image: "monitor_service:latest"
+    entrypoint: python3 /__main__.py
+    environment:
+      - HOSTS_IDS=[1,2,3]
+      - HOSTS_IPS=["monitor_1","monitor_2","monitor_3"]
+      - PORTS=[8002,8002,8002]
+      - HOST_ID=4
+    networks:
+      - tp2_net
+
   rabbitmq:
     container_name: rabbit
     image: "rabbitmq:3-management"
