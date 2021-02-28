@@ -40,7 +40,7 @@ class BullyMessageReceiver:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('', self._port))
         sock.listen(LISTEN_BACKLOG)
-        logging.info("Waiting for connections")
+        logging.info("Listening for a connection at port: {}".format(self._port))
         if self._open_sockets_barrier is not None:
             self._open_sockets_barrier.wait()
         connection, address = sock.accept()

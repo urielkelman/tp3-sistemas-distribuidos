@@ -37,8 +37,6 @@ class BullyConnection:
         self._sending_connections = manager.dict()
 
         open_sockets_barrier = Barrier(len(bully_connections_config) + 1)
-        import logging
-        logging.info(len(bully_connections_config) + 1)
 
         for i in range(len(bully_connections_config)):
             bully_message_receiver = BullyMessageReceiver(
@@ -52,7 +50,6 @@ class BullyConnection:
             self._sending_connections[h_id] = open_sending_socket_connection(host_and_port[0], host_and_port[1])
 
         # This barrier exists because a listening process can try to access to the sending connections after they are all initialized.
-        logging.info("wait")
         open_sockets_barrier.wait()
 
     def _run(self):
@@ -62,7 +59,7 @@ class BullyConnection:
         while True:
             bully_leader_election = self._bully_leader_election_dict["bully"]
             leader = bully_leader_election.get_current_leader()
-            if leader != -1 or leader != self._host_id:
+            if leader != self._host_id:
                 replica_behaviour = ReplicaBehaviour(self._sending_connections, self._bully_leader_election_dict,
                                                      self._bully_leader_election_lock)
                 replica_behaviour.execute_tasks()

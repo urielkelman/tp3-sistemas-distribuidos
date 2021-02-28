@@ -23,6 +23,6 @@ class JsonSender:
     def send_json(connection, object_to_send):
         json_object = JsonSender._to_json(object_to_send)
         JsonSender._send_fixed_size(connection, json_object)
-        logging.info("Sending json object: {}".format(json_object))
+        # logging.info("Sending json object: {}".format(json_object))
         connection.sendall(json_object)
 

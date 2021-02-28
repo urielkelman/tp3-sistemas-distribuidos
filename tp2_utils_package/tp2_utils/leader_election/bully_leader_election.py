@@ -80,8 +80,6 @@ class BullyLeaderElection:
             if self._current_leader == self._process_number:
                 return self._generate_leader_message(message["origin_process_number"])
             elif not self._is_running_election:
-                import logging
-                logging.info("Set -1!")
                 self._current_leader = -1
             return self._generate_ok_message(message["origin_process_number"])
         elif message["message"] == LEADER_MESSAGE:

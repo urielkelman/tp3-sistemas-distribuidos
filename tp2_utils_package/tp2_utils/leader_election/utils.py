@@ -15,7 +15,7 @@ def open_sending_socket_connection(host, port):
         logging.info("Trying to establish connection with {} and port {}".format(host, port))
         try:
             connection = socket.create_connection((host, port), timeout=SOCKET_TIMEOUT)
-            logging.info("Aca si")
+            logging.info("Established connection with host: {} and port: {}".format(host, port))
             return Connection(host, port, connection)
         except (ConnectionRefusedError, socket.gaierror):
             total_retries += 1

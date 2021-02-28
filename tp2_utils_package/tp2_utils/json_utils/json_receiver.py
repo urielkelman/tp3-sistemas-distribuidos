@@ -21,23 +21,11 @@ class JsonReceiver:
 
         return buffer
 
-        # if with_timeout:
-        #     poller = select.poll()
-        #     poller.register(connection, select.POLLIN)
-        #     events = poller.poll(SOCKET_TIMEOUT)
-        #     if not events:
-        #         raise TimeoutError
-        # buffer = ""
-        # while len(buffer) < size:
-        #     buffer += connection.recv(size).decode('utf-8')
-        #     # if not buffer:
-        #     #     raise TimeoutError
-
     @staticmethod
     def receive_json(connection):
         request_size = int(JsonReceiver._receive_fixed_size(connection, BYTES_AMOUNT_REQUEST_SIZE))
         data = JsonReceiver._receive_fixed_size(connection, request_size)
-        logging.info("Json received: {}".format(data))
-        logging.info("Address: {}".format(connection.getpeername()))
+        # logging.info("Json received: {}".format(data))
+        # logging.info("Address: {}".format(connection.getpeername()))
 
         return json.loads(data)
