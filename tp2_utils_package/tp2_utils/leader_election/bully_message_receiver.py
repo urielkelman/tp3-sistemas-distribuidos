@@ -35,15 +35,19 @@ class BullyMessageReceiver:
         self._sending_connections = sending_connections
         self._open_sockets_barrier = open_sockets_barrier
 
+    @staticmethod
+    def _accept_connection(sock: socket.socket):
+        connection, address = sock.accept()
+        return connection, address
+
     def create_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('', self._port))
         sock.listen(LISTEN_BACKLOG)
         logging.info("Listening for a connection at port: {}".format(self._port))
-        if self._open_sockets_barrier is not None:
-            self._open_sockets_barrier.wait()
-        connection, address = sock.accept()
+        self._open_sockets_barrier.wait()
+        connection, address = self._accept_connection(sock)
         return sock, connection, address
 
     def _generate_bully_message(self, message):
@@ -90,7 +94,5 @@ class BullyMessageReceiver:
                     JsonSender.send_json(connection, final_message)
             except (ConnectionResetError, TimeoutError, OSError):
                 logging.exception("Exception in message receiver:")
-                sock.close()
                 logging.info("Connection with peer {} was reset. Close and reopen socket in port {} to listen if the node restart.".format(address, self._port))
-                self._open_sockets_barrier = None
-                sock, connection, address = self.create_socket()
+                connection, address = self._accept_connection(sock)
