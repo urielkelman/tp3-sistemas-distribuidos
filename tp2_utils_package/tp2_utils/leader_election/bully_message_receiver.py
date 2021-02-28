@@ -42,7 +42,6 @@ class BullyMessageReceiver:
 
     def create_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('', self._port))
         sock.listen(LISTEN_BACKLOG)
         logging.info("Listening for a connection at port: {}".format(self._port))
