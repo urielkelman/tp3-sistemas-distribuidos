@@ -30,3 +30,9 @@ message_pipeline:
 message_pipeline_kwargs:
   ends_to_receive: 1
   ends_to_send: 1
+  data_path: /data_volume/message_pipeline
+  signature: reviews_funny_counter
+  commits_until_save: 30
+
+message_set_params:
+  set_data_path: /data_volume/message_set

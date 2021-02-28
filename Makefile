@@ -5,7 +5,6 @@ default: run
 all:
 
 run:
-	find ./volumes -maxdepth 3 -not -path '*/\.*' -type f -exec rm "{}" \;
 	docker build -f ./consumer_producer_service/Dockerfile -t "consumer_producer_service:latest" .
 	docker build -f ./business_download_service/Dockerfile -t "business_download_service:latest" .
 	docker build -f ./business_joiner_service/Dockerfile -t "business_joiner_service:latest" .
@@ -19,7 +18,6 @@ logs:
 stop:
 	docker-compose -f docker-compose.yml stop -t 1
 	docker-compose -f docker-compose.yml down
-	find ./volumes -maxdepth 3 -not -path '*/\.*' -type f -exec rm "{}" \;
 test:
 	docker-compose -f docker-compose-test.yml up -d
 	docker build -f ./test_dockerfile/Dockerfile -t "test_dockerfile:latest" .

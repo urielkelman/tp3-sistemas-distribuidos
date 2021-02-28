@@ -5,7 +5,7 @@ rabbit_params:
     - yelp_user_stats_condition1
     - yelp_user_stats_condition2
     - yelp_user_stats_condition3
-  messages_to_group: 100
+  messages_to_group: 1000
 
 group_aggregates:
   - name: ReviewCount
@@ -36,6 +36,7 @@ message_pipeline:
 message_pipeline_kwargs:
   data_path: /data_volume/message_pipeline
   signature: user_stats_calculator_shard1
+  commits_until_save: 60
 
 message_set_params:
   set_data_path: /data_volume/message_set

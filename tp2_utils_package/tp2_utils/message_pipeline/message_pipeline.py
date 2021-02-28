@@ -11,7 +11,7 @@ import json
 
 
 WINDOW_END_MESSAGE = {}
-COMMITS_TO_KEEP = 100
+COMMITS_UNTIL_SAVE = 100
 ROTATING_COMMIT_SAVE_PATH = "%s/%d.pickle"
 ROTATING_COMMIT_REGEX = "(\d+).pickle"
 LOG_LOCATION = "%s/LOG"
@@ -44,7 +44,8 @@ class MessagePipeline(StateCommiter):
                  idempotency_set: Optional[MessageSet] = None,
                  ends_to_receive: int = 1, ends_to_send: int = 1,
                  stop_at_window_end: bool = False,
-                 signature: Optional[str] = None):
+                 signature: Optional[str] = None,
+                 commits_until_save: int = COMMITS_UNTIL_SAVE):
         """
 
         :param operations: the operations to use in the pipeline
@@ -54,8 +55,10 @@ class MessagePipeline(StateCommiter):
         :param ends_to_send: the ends to send when stream ends
         :param stop_at_window_end: if stop the consumer or not when the stream ends
         :param signature: signature for the end message
+        :param commits_until_save: how many commits to maintain in log before serializing the state
         """
         super().__init__()
+        self.commits_until_save = commits_until_save
         self.operations = operations
         self.idempotency_set = idempotency_set
         self.data_path = data_path
@@ -164,12 +167,12 @@ class MessagePipeline(StateCommiter):
         if self.logfile:
             self.logfile.write(END_COMMIT_LINE % cn)
             self.logfile.flush()
-        if self.data_path and cn % COMMITS_TO_KEEP == 0:
+        if self.data_path and cn % self.commits_until_save == 0:
             with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'wb') as commit_file:
                 dill.dump((self.operations, self.ends_received), commit_file)
-            if (cn > COMMITS_TO_KEEP and
-                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn-COMMITS_TO_KEEP))):
-                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn-COMMITS_TO_KEEP))
+            if (cn > self.commits_until_save and
+                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))):
+                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))
             self.logfile = open(LOG_LOCATION % self.data_path, "w")
         return cn
 
@@ -221,10 +224,10 @@ class MessagePipeline(StateCommiter):
                     self.commit_number = max(available_commits)
             except Exception:
                 with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
-                                                       max(available_commits)-COMMITS_TO_KEEP),
+                                                       max(available_commits) - self.commits_until_save),
                           'rb') as commit_file:
                     self.operations, self.ends_received = dill.load(commit_file)
-                    self.commit_number = max(available_commits)-COMMITS_TO_KEEP
+                    self.commit_number = max(available_commits) - self.commits_until_save
             self.commit_number = self._restore_up_to_last_commit(self.commit_number)
             if self.idempotency_set:
                 try:

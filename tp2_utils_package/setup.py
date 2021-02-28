@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="tp2_utils",
-    version="0.2.1",
+    version="0.2.2",
     author="Gianmarco Cafferata",
     author_email="giancafferata@hotmail.com",
     packages=setuptools.find_packages(),

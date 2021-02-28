@@ -24,6 +24,7 @@ message_pipeline:
 message_pipeline_kwargs:
   data_path: /data_volume/message_pipeline
   signature: day_histogram_calculator
+  commits_until_save: 3
 
 message_set_params:
   set_data_path: /data_volume/message_set

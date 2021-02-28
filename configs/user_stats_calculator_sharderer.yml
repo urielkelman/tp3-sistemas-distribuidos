@@ -23,3 +23,9 @@ operations:
 
 message_pipeline:
   - UserStatsProjector
+
+message_pipeline_kwargs:
+  signature: user_stats_calculator_sharderer
+
+message_set_params:
+  set_data_path: /data_volume/message_set

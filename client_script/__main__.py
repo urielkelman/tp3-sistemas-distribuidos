@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from multiprocessing import Process
 
-from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE
+from tp2_utils.message_pipeline.message_pipeline import message_is_end, WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.rabbit_producer import RabbitQueueProducer
 from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
@@ -83,7 +83,7 @@ class DataGatherer:
         self.file = open(output_path, 'w')
 
     def gather_users(self, item):
-        if item == WINDOW_END_MESSAGE:
+        if message_is_end(item):
             self.file.close()
             return [], True
         else:
@@ -91,7 +91,7 @@ class DataGatherer:
             return [], False
 
     def gather_day_freq(self, item):
-        if item == WINDOW_END_MESSAGE:
+        if message_is_end(item):
             self.file.close()
             return [], True
         else:
@@ -99,7 +99,7 @@ class DataGatherer:
             return [], False
 
     def gather_funny_cities(self, item):
-        if item == WINDOW_END_MESSAGE:
+        if message_is_end(item):
             self.file.close()
             return [], True
         else:
