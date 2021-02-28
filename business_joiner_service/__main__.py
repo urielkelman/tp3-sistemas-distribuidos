@@ -15,6 +15,8 @@ from multiprocessing import Process
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
 BUSINESSES_READY_PATH = "%s/DOWNLOAD_READY"
 BUSINESSES_DONE_PATH = "%s/DOWNLOAD_DONE"
+JOINING_DONE_PATH = "%s/JOINING_DONE"
+ENDED_PATH = "%s/ENDED"
 PATH_TO_SAVE_BUSINESSES = "%s/businesses.pickle"
 
 logger = logging.getLogger("root")
@@ -25,8 +27,9 @@ def wait_for_file_ready(data_path, item):
         return [], True
     return [], False
 
-def add_location_to_businesses(business_locations, item):
+def add_location_to_businesses(business_locations, data_path, item):
     if message_is_end(item):
+        Path(JOINING_DONE_PATH % data_path).touch()
         return [BroadcastMessage(WINDOW_END_MESSAGE)], True
     item['city'] = business_locations[item['business_id']]
     return [item], False
@@ -68,20 +71,27 @@ def run_process(downloader_host, downloader_port,
                     sleep(1)
 
         print("Starting consumer to join")
-
-        cp = RabbitQueueConsumerProducer(rabbit_host, join_from_queue,
-                                         [output_joined_queue],
-                                         DummyStateCommiter(partial(add_location_to_businesses, business_locations)),
-                                         messages_to_group=1000, logger=logger)
-        cp()
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((downloader_host, downloader_port))
-        socket_transferer = BlockingSocketTransferer(sock)
-        socket_transferer.send_plain_text("END")
-        socket_transferer.close()
+        if not os.path.exists(JOINING_DONE_PATH % data_path):
+            with open(PATH_TO_SAVE_BUSINESSES % data_path, "rb") as business_file:
+                business_locations = pickle.load(business_file)
+            cp = RabbitQueueConsumerProducer(rabbit_host, join_from_queue,
+                                             [output_joined_queue],
+                                             DummyStateCommiter(partial(add_location_to_businesses,
+                                                                        business_locations, data_path)),
+                                             messages_to_group=1000, logger=logger)
+            cp()
+        if not os.path.exists(ENDED_PATH % data_path):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((downloader_host, downloader_port))
+            socket_transferer = BlockingSocketTransferer(sock)
+            socket_transferer.send_plain_text("END")
+            assert socket_transferer.receive_plain_text() == "REGISTERED"
+            Path(ENDED_PATH % data_path).touch()
+            socket_transferer.close()
         os.remove(BUSINESSES_READY_PATH % data_path)
         os.remove(BUSINESSES_DONE_PATH % data_path)
+        os.remove(JOINING_DONE_PATH % data_path)
+        os.remove(ENDED_PATH % data_path)
 
 if __name__ == "__main__":
     downloader_host = os.getenv('DOWNLOADER_HOST')

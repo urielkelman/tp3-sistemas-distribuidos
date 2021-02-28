@@ -170,7 +170,7 @@ class TestIntegrations(unittest.TestCase):
             p.start()
             write_chaos.send(p.pid)
             self.processes_to_join[i]=(p,self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(0.3, size=1)[0]+0.05)
+            sleep(np.random.poisson(0.4, size=1)[0]+0.05)
 
     def test_without_chaos_monkey(self):
         random.seed(0)

@@ -83,7 +83,6 @@ class RabbitQueueConsumerProducer:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.info("Stopping consumer")
             ch.stop_consuming()
-            ch.close()
             self.connection.close()
 
     def _obj_to_bytes(self, obj):

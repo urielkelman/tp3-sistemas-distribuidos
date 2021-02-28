@@ -23,7 +23,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -35,7 +35,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - day_histogram_calculator_message_pipeline:/data_volume/message_pipeline
       - day_histogram_calculator_message_set:/data_volume/message_set
     depends_on:
@@ -49,7 +49,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_calculator_sharderer:/data_volume/message_set
     depends_on:
       - rabbitmq
@@ -62,7 +62,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_calculator_shard1_message_pipeline:/data_volume/message_pipeline
       - user_stats_calculator_shard1_message_set:/data_volume/message_set
     depends_on:
@@ -76,7 +76,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_calculator_shard2_message_pipeline:/data_volume/message_pipeline
       - user_stats_calculator_shard2_message_set:/data_volume/message_set
     depends_on:
@@ -90,7 +90,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_calculator_shard3_message_pipeline:/data_volume/message_pipeline
       - user_stats_calculator_shard3_message_set:/data_volume/message_set
     depends_on:
@@ -104,7 +104,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_filter_5_and_unique_text:/data_volume/message_set
     depends_on:
       - rabbitmq
@@ -117,7 +117,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_filter_50:/data_volume/message_set
     depends_on:
       - rabbitmq
@@ -130,7 +130,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - user_stats_filter_50_and_5_stars:/data_volume/message_set
     depends_on:
       - rabbitmq
@@ -143,7 +143,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - reviews_funny_counter_message_pipeline:/data_volume/message_pipeline
       - reviews_funny_counter_message_set:/data_volume/message_set
     depends_on:
@@ -157,7 +157,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - configs:/configs
       - top_10_count_by_city_message_pipeline:/data_volume/message_pipeline
       - top_10_count_by_city_message_set:/data_volume/message_set
     depends_on:
@@ -201,6 +201,12 @@ services:
 
 volumes:
   rabbitmq_data:
+  configs:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./configs
   joiner_service_data:
   download_service_data:
   user_stats_calculator_shard1_message_pipeline:

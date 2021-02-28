@@ -10,22 +10,57 @@ from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 from multiprocessing import Process
 import json
 import logging
+import shutil
 
 BUSINESSES_QUEUE = 'yelp_businesses_news'
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
 PATH_TO_SAVE_BUSINESSES = "%s/businesses.pickle"
+PATH_TO_SAVE_CLIENTS_ENDED = "%s/clients_ended.pickle"
 PATH_TO_SAVE_LOGFILE = '%s/logfile'
 BUSINESSES_READY = '%s/BUSINESSES_READY'
+SAFE_BACKUP_END = ".copy"
 
 logger = logging.getLogger("root")
 
 
 class SocketDataDownloader():
+    def _safe_pickle_dump(self, obj, path):
+        if os.path.exists(path):
+            shutil.copy2(path, path+SAFE_BACKUP_END)
+        with open(path, "wb") as dumpfile:
+            pickle.dump(obj, dumpfile)
+
+    def _safe_pickle_load(self, path):
+        result = None
+        try:
+            if os.path.exists(path):
+                with open(path, "rb") as dumpfile:
+                    result = pickle.load(dumpfile)
+        except Exception:
+            try:
+                if os.path.exists(path + SAFE_BACKUP_END):
+                    shutil.copy2(path + SAFE_BACKUP_END, path)
+                    with open(path, "rb") as dumpfile:
+                        result = pickle.load(dumpfile)
+            except Exception:
+                pass
+        if result != None:
+            return True, result
+        else:
+            return False, None
+
     def __init__(self, port, listen_backlog, clients, data_path):
         self.port = port
         self.listen_backlog = listen_backlog
         self.clients_to_end = clients
-        self.clients_ended = 0
+        if os.path.exists(PATH_TO_SAVE_CLIENTS_ENDED % data_path):
+            success, clients_ended = self._safe_pickle_load(PATH_TO_SAVE_CLIENTS_ENDED % data_path)
+            if success:
+                self.clients_ended = clients_ended
+            else:
+                self.clients_ended = 0
+        else:
+            self.clients_ended = 0
         self.data_path = data_path
         self.process_list = []
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,6 +88,8 @@ class SocketDataDownloader():
             msg = socket_transferer.receive_plain_text()
             if msg == "END":
                 self.clients_ended += 1
+                self._safe_pickle_dump(self.clients_ended, PATH_TO_SAVE_CLIENTS_ENDED % self.data_path)
+                socket_transferer.send_plain_text("RECEIVED")
                 socket_transferer.close()
                 return
             if msg != "SEND FILE":
