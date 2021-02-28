@@ -6,13 +6,23 @@ import os
 import re
 import dill
 from pathlib import Path
+import base64
+import json
 
 
 WINDOW_END_MESSAGE = {}
-COMMITS_TO_KEEP = 10
+COMMITS_TO_KEEP = 100
 ROTATING_COMMIT_SAVE_PATH = "%s/%d.pickle"
 ROTATING_COMMIT_REGEX = "(\d+).pickle"
+LOG_LOCATION = "%s/LOG"
 FLUSH_INDICATOR = "%s/FLUSH"
+
+ITEM_LOG_LINE = "%s\n"
+END_COMMIT_LINE = "END_COMMIT@%d@\n"
+END_COMMIT_REGEX = "END_COMMIT@(\d+)@\n"
+CANCEL_SECTION = "\n\n@CANCEL@\n\n"
+CANCEL_REGEX = "\s*@CANCEL@\s*"
+
 
 def message_is_end(message) -> bool:
     if not message:
@@ -56,6 +66,7 @@ class MessagePipeline(StateCommiter):
         self.stop_at_window_end = stop_at_window_end
         self.flush_at_next_commit = False
         self.signature = signature
+        self.logfile = None
         if self.data_path and os.path.exists(FLUSH_INDICATOR % self.data_path):
             self.flush()
         self.recover_state()
@@ -67,6 +78,15 @@ class MessagePipeline(StateCommiter):
         else:
             return [BroadcastMessage(item=WINDOW_END_MESSAGE)
                     if message_is_end(r) else r for r in responses]
+
+    def _write_item_to_logfile(self, item: Dict):
+        if self.logfile:
+            item_dump = base64.b64encode(json.dumps(item).encode('utf-8')).decode('utf-8')
+            self.logfile.write(ITEM_LOG_LINE % item_dump)
+            self.logfile.flush()
+
+    def _recover_item_from_line(self, line: str) -> Dict:
+        return json.loads(base64.b64decode(line[:-1]))
 
     def flush(self) -> NoReturn:
         """
@@ -83,6 +103,53 @@ class MessagePipeline(StateCommiter):
         if self.data_path:
             os.remove(FLUSH_INDICATOR % self.data_path)
 
+    def _restore_up_to_last_commit(self, lower_commit_number: int) -> int:
+        """
+
+        :param lower_commit_number: the starting point for starting to redo
+        :return: the new commit number
+        """
+        if self.data_path and os.path.exists(LOG_LOCATION % self.data_path):
+            logfile = open(LOG_LOCATION % self.data_path, "r")
+            cn = lower_commit_number
+            temp_items_to_recover = []
+            items_to_recover = []
+            line = logfile.readline()
+            while line:
+                if re.match(END_COMMIT_REGEX, line):
+                    cn = int(re.findall(END_COMMIT_REGEX, line)[0])
+                    if cn > lower_commit_number:
+                        items_to_recover += temp_items_to_recover
+                        temp_items_to_recover = []
+                    else:
+                        temp_items_to_recover = []
+                elif re.match(CANCEL_REGEX, line):
+                    temp_items_to_recover = []
+                else:
+                    try:
+                        temp_items_to_recover.append(self._recover_item_from_line(line))
+                    except Exception:
+                        pass
+                line = logfile.readline()
+            logfile.close()
+            self.logfile = open(LOG_LOCATION % self.data_path, "a")
+            for item in items_to_recover:
+                if message_is_end(item):
+                    self.ends_received += 1
+                items_to_process = [item]
+                for op in self.operations:
+                    new_items_to_process = []
+                    for item in items_to_process:
+                        new_items_to_process += op.process(item)
+                    items_to_process = new_items_to_process
+            self.logfile.write(CANCEL_SECTION)
+            self.logfile.flush()
+            return cn
+        else:
+            if self.data_path:
+                self.logfile = open(LOG_LOCATION % self.data_path, "w")
+            return lower_commit_number
+
     def commit(self) -> int:
         """
         Commits the prepared changes
@@ -94,12 +161,16 @@ class MessagePipeline(StateCommiter):
         else:
             cn = self.commit_number
             self.commit_number += 1
-        if self.data_path:
-            with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number), 'wb') as commit_file:
-                dill.dump(self.operations, commit_file)
-            if (self.commit_number > COMMITS_TO_KEEP and
-                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))):
-                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, self.commit_number-10))
+        if self.logfile:
+            self.logfile.write(END_COMMIT_LINE % cn)
+            self.logfile.flush()
+        if self.data_path and cn % COMMITS_TO_KEEP == 0:
+            with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'wb') as commit_file:
+                dill.dump((self.operations, self.ends_received), commit_file)
+            if (cn > COMMITS_TO_KEEP and
+                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn-COMMITS_TO_KEEP))):
+                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn-COMMITS_TO_KEEP))
+            self.logfile = open(LOG_LOCATION % self.data_path, "w")
         return cn
 
     def prepare(self, item: Dict) -> Tuple[List, bool]:
@@ -112,6 +183,7 @@ class MessagePipeline(StateCommiter):
             item = WINDOW_END_MESSAGE
             if self.ends_received < self.ends_to_receive:
                 return [], False
+        self._write_item_to_logfile(item)
         items_to_process = [item]
         for op in self.operations:
             new_items_to_process = []
@@ -145,25 +217,33 @@ class MessagePipeline(StateCommiter):
                 with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
                                                        max(available_commits)),
                           'rb') as commit_file:
-                    self.operations = dill.load(commit_file)
+                    self.operations, self.ends_received = dill.load(commit_file)
                     self.commit_number = max(available_commits)
             except Exception:
                 with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
-                                                       max(available_commits)-1),
+                                                       max(available_commits)-COMMITS_TO_KEEP),
                           'rb') as commit_file:
-                    self.operations = dill.load(commit_file)
-                    self.commit_number = max(available_commits)-1
+                    self.operations, self.ends_received = dill.load(commit_file)
+                    self.commit_number = max(available_commits)-COMMITS_TO_KEEP
+            self.commit_number = self._restore_up_to_last_commit(self.commit_number)
             if self.idempotency_set:
                 try:
                     self.idempotency_set.recover_state(self.commit_number)
                 except Exception as e:
                     raise e
+            self.commit_number += 1
         else:
+            if self.data_path:
+                self.commit_number = self._restore_up_to_last_commit(0)
             if self.idempotency_set:
-                self.idempotency_set.recover_state()
-            self.commit_number = 1
+                self.idempotency_set.recover_state(self.commit_number)
+            self.commit_number += 1
 
     def commit_done_cleanup(self):
         if self.flush_at_next_commit:
             self.flush()
             self.flush_at_next_commit = False
+
+    def __del__(self):
+        if self.logfile:
+            self.logfile.close()

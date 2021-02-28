@@ -10,7 +10,7 @@ import pika
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
@@ -87,7 +87,7 @@ class TestIntegrations(unittest.TestCase):
     def _setup_message_set(self, location: str):
         shutil.rmtree(location, ignore_errors=True)
         os.mkdir(location)
-        message_set = DiskMessageSet(location)
+        message_set = DiskMessageSetByLastCommit(location)
         self.dirs_to_delete.append(location)
         return message_set
 

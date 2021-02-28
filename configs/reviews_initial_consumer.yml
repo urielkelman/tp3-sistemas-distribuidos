@@ -5,7 +5,7 @@ rabbit_params:
     - yelp_reviews_histogram_consumer
     - yelp_reviews_funny_counter_consumer
     - yelp_reviews_user_stats_consumer
-  messages_to_group: 1000
+  messages_to_group: 10000
 
 group_aggregates: []
 

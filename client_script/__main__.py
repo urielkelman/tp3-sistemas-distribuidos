@@ -10,7 +10,7 @@ from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 REVIEWS_QUEUE = 'yelp_reviews_news'
 BUSINESSES_QUEUE = 'yelp_businesses_news'
-MESSAGE_GROUPING = 1000
+MESSAGE_GROUPING = 100000
 RABBIT_HOST = 'localhost'
 
 MORE_THAN_50_REVIEWS_PATH = "users_more_than_50_reviews.txt"

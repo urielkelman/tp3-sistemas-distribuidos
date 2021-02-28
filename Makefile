@@ -5,6 +5,7 @@ default: run
 all:
 
 run:
+	find ./volumes -maxdepth 3 -not -path '*/\.*' -type f -exec rm "{}" \;
 	docker build -f ./consumer_producer_service/Dockerfile -t "consumer_producer_service:latest" .
 	docker build -f ./business_download_service/Dockerfile -t "business_download_service:latest" .
 	docker build -f ./business_joiner_service/Dockerfile -t "business_joiner_service:latest" .

@@ -7,11 +7,6 @@ import json
 import re
 import shutil
 
-message = "Python is fun"
-message_bytes = message.encode('ascii')
-base64_bytes = base64.b64encode(message_bytes)
-base64_message = base64_bytes.decode('ascii')
-
 from collections import deque
 from .message_set import MessageSet
 
