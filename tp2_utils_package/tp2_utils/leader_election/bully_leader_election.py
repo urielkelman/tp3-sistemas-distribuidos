@@ -55,7 +55,7 @@ class BullyLeaderElection:
         self._is_running_election = False
         self._current_leader = self._process_number
         return [self._generate_leader_message(destination_process) for destination_process in
-                self._other_processes_number if destination_process != self._process_number]
+                self._other_processes_number if destination_process != self._process_number and destination_process < self._process_number]
 
     def start_election(self) -> List[Dict]:
         """
@@ -120,3 +120,8 @@ class BullyLeaderElection:
         Returns the identifying number of the current registered leader, or -1 if there is not a leader.
         """
         return self._current_leader
+
+    def is_leader(self):
+        """
+        Returns a boolean indicating if the process is the leader.
+        """

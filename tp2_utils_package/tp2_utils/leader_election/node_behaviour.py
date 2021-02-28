@@ -34,9 +34,10 @@ class NodeBehaviour:
             "host_id": self._bully_leader_election_dict['bully'].get_id()
         }
 
-    def _generate_ack_message(self) -> Dict:
+    def _generate_ack_message(self, destination_host_id) -> Dict:
         return {
             "layer": self.CONNECTION_LAYER,
             "message": self.ACK_MESSAGE,
-            "host_id": self._bully_leader_election_dict['bully'].get_id()
+            "host_id": self._bully_leader_election_dict['bully'].get_id(),
+            "destination_host_id": destination_host_id
         }

@@ -1,33 +1,20 @@
-import socket
-import logging
-
-from multiprocessing import Process, Queue, Manager, Lock
-from typing import Dict, Tuple
+from multiprocessing import Process, Manager, Lock, Barrier
 from time import sleep
+from typing import Dict, Tuple
 
-from tp2_utils.leader_election.bully_message_receiver import BullyMessageReceiver
+from tp2_utils.leader_election.utils import open_sending_socket_connection
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
+from tp2_utils.leader_election.bully_message_receiver import BullyMessageReceiver
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour
+from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
 
 LISTEN_BACKLOG = 5
 CONNECTION_LAYER = "CONNECTION"
 BULLY_LAYER = "BULLY"
 ACK_MESSAGE = "ACK"
 
-SOCKET_TIMEOUT = 2
-
 
 class BullyConnection:
-    @staticmethod
-    def _open_sending_socket_connection(host, port):
-        while True:
-            try:
-                connection = socket.create_connection((host, port), timeout=SOCKET_TIMEOUT)
-                return connection
-            except ConnectionRefusedError:
-                sleep(1)
-
     def __init__(self, bully_connections_config: Dict[int, Tuple], lowest_port: int, host_id: int):
         """
         Initializes connections and bully
@@ -41,22 +28,32 @@ class BullyConnection:
         self._sockets_to_send_messages = {}
 
         bully_leader_election = BullyLeaderElection(host_id, list(bully_connections_config.keys()) + [host_id])
-        concurrent_dict = Manager().dict()
+        manager = Manager()
+        concurrent_dict = manager.dict()
         concurrent_dict['bully'] = bully_leader_election
         self._bully_leader_election_dict = concurrent_dict
         self._bully_leader_election_lock = Lock()
 
+        self._sending_connections = manager.dict()
+
+        open_sockets_barrier = Barrier(len(bully_connections_config) + 1)
+        import logging
+        logging.info(len(bully_connections_config) + 1)
+
         for i in range(len(bully_connections_config)):
             bully_message_receiver = BullyMessageReceiver(
-                host_id, lowest_port + i, self._bully_leader_election_dict, self._bully_leader_election_lock
+                host_id, lowest_port + i, self._bully_leader_election_dict, self._bully_leader_election_lock,
+                self._sending_connections, open_sockets_barrier
             )
             listening_process = Process(target=bully_message_receiver.start_listening)
             listening_process.start()
 
-        self._sending_connections = {}
-
         for h_id, host_and_port in bully_connections_config.items():
-            self._sending_connections[h_id] = self._open_sending_socket_connection(host_and_port[0], host_and_port[1])
+            self._sending_connections[h_id] = open_sending_socket_connection(host_and_port[0], host_and_port[1])
+
+        # This barrier exists because a listening process can try to access to the sending connections after they are all initialized.
+        logging.info("wait")
+        open_sockets_barrier.wait()
 
     def _run(self):
         """
