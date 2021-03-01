@@ -15,6 +15,7 @@ DEFAULT_ACK_PORT = 8000
 ACK_MESSAGE = "ACK"
 DOCKER_PREFIX = "tp3-sistemas-distribuidos_"
 
+
 class LeaderBehaviour(NodeBehaviour):
     def __init__(self, connections: Dict[int, Connection], bully_leader_election_dict: Dict[str, BullyLeaderElection],
                  bully_leader_election_lock: Lock, workers_config: Dict):
@@ -34,7 +35,8 @@ class LeaderBehaviour(NodeBehaviour):
             "image": worker_node_tree["image"],
             "entrypoint": worker_node_tree["entrypoint"],
             "network": DOCKER_PREFIX + worker_node_tree["networks"][0],
-            "volumes": {DOCKER_PREFIX + volume.split(":")[0]: {"bind": volume.split(":")[1]} for volume in worker_node_tree["volumes"]},
+            "volumes": {DOCKER_PREFIX + volume.split(":")[0]: {"bind": volume.split(":")[1]} for volume in
+                        worker_node_tree["volumes"]},
             "environment": worker_node_tree["environment"] if "environment" in worker_node_tree else []
         }
 
