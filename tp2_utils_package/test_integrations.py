@@ -8,9 +8,9 @@ from multiprocessing import Process, Pipe
 import pika
 
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
@@ -253,9 +253,9 @@ class TestIntegrations(unittest.TestCase):
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step2',
                                          ['pipelineB_result'],
                                          pipe,
-                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP,)
+                                         messages_to_group=DEFAULT_MESSAGES_TO_GROUP, )
         self._setup_start_process(cp)
-        
+
     def _setup_pipelineC(self):
         message_set = self._setup_message_set('/tmp/message_set1')
         pipe = MessagePipeline([], ends_to_receive=1, ends_to_send=1,
@@ -355,7 +355,7 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_1[1:]:
             try:
                 self.channel.basic_publish(exchange='', routing_key='pipeline_start',
-                                       body=json.dumps(element))
+                                           body=json.dumps(element))
             except Exception as e:
                 print(e)
         consume_process.join()

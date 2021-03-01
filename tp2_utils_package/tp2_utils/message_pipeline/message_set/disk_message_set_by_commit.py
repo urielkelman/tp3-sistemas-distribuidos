@@ -1,9 +1,9 @@
-from typing import Any, NoReturn, Optional, Tuple, Any
 import base64
+import json
 import os
 import pickle
-import json
 import shutil
+from typing import NoReturn, Optional, Tuple, Any
 
 message = "Python is fun"
 message_bytes = message.encode('ascii')
@@ -11,6 +11,7 @@ base64_bytes = base64.b64encode(message_bytes)
 base64_message = base64_bytes.decode('ascii')
 
 from .message_set import MessageSet
+
 BUCKET_PATH = "%s/%d"
 SAFE_BACKUP_END = ".copy"
 
@@ -18,7 +19,7 @@ SAFE_BACKUP_END = ".copy"
 class DiskMessageSetByLastCommit(MessageSet):
     def _safe_pickle_dump(self, obj, path):
         if os.path.exists(path):
-            shutil.copy2(path, path+SAFE_BACKUP_END)
+            shutil.copy2(path, path + SAFE_BACKUP_END)
         with open(path, "wb") as dumpfile:
             pickle.dump(obj, dumpfile)
 
@@ -64,7 +65,7 @@ class DiskMessageSetByLastCommit(MessageSet):
                 if success:
                     self.last_item_set = item_set
                     actual_cn = commit_number
-                elif os.path.exists(BUCKET_PATH % (self.set_data_path, commit_number-1)):
+                elif os.path.exists(BUCKET_PATH % (self.set_data_path, commit_number - 1)):
                     success, item_set = self._safe_pickle_load(BUCKET_PATH % (self.set_data_path, commit_number))
                     if success:
                         self.last_item_set = item_set
@@ -101,8 +102,8 @@ class DiskMessageSetByLastCommit(MessageSet):
         """
         rn = self.commit_number
         self._safe_pickle_dump(set(self.prepare_buffer), BUCKET_PATH % (self.set_data_path, rn))
-        if os.path.exists(BUCKET_PATH % (self.set_data_path, rn-5)):
-            os.remove(BUCKET_PATH % (self.set_data_path, rn-5))
+        if os.path.exists(BUCKET_PATH % (self.set_data_path, rn - 5)):
+            os.remove(BUCKET_PATH % (self.set_data_path, rn - 5))
         self.last_item_set = set(self.prepare_buffer)
         self.prepare_buffer = []
         self.commit_number += 1
@@ -110,8 +111,7 @@ class DiskMessageSetByLastCommit(MessageSet):
 
     def flush(self):
         for f in os.listdir(self.set_data_path):
-            os.remove(self.set_data_path + '/' +f)
+            os.remove(self.set_data_path + '/' + f)
         self.prepare_buffer = []
         self.last_item_set = set()
         self.recover_state()
-

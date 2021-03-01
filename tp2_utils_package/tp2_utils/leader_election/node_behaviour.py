@@ -1,14 +1,13 @@
 import logging
 import socket
-
+from abc import abstractmethod
 from multiprocessing import Lock
 from typing import Dict
-from abc import abstractmethod
 
-from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-from tp2_utils.leader_election.connection import Connection
 from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
 from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
+from tp2_utils.leader_election.connection import Connection
 
 
 class NodeBehaviour:

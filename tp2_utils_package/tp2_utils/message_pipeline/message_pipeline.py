@@ -1,14 +1,15 @@
-from typing import Dict, List, Tuple, Optional, NoReturn, Any
-from tp2_utils.message_pipeline.message_set.message_set import MessageSet
-from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
-from tp2_utils.interfaces.state_commiter import StateCommiter
-import os
-import re
-import dill
-from pathlib import Path
 import base64
 import json
+import os
+import re
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, NoReturn
 
+import dill
+
+from tp2_utils.interfaces.state_commiter import StateCommiter
+from tp2_utils.message_pipeline.message_set.message_set import MessageSet
+from tp2_utils.rabbit_utils.rabbit_consumer_producer import BroadcastMessage
 
 WINDOW_END_MESSAGE = {}
 COMMITS_UNTIL_SAVE = 100
@@ -27,12 +28,13 @@ CANCEL_REGEX = "\s*@CANCEL@\s*"
 def message_is_end(message) -> bool:
     if not message:
         return True
-    if (len(message.keys())==2
+    if (len(message.keys()) == 2
             and "type" in message
             and "pipe_signature" in message
-            and message['type']=="END"):
+            and message['type'] == "END"):
         return True
     return False
+
 
 def signed_end_message(signature):
     return {"type": "END", "pipe_signature": signature}
@@ -171,7 +173,7 @@ class MessagePipeline(StateCommiter):
             with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'wb') as commit_file:
                 dill.dump((self.operations, self.ends_received), commit_file)
             if (cn > self.commits_until_save and
-                os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))):
+                    os.path.exists(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))):
                 os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))
             self.logfile = open(LOG_LOCATION % self.data_path, "w")
         return cn

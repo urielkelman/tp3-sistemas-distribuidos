@@ -1,15 +1,14 @@
-import socket
-import docker
 import logging
-
-from typing import Dict, List
 from multiprocessing import Lock
+from typing import Dict, List
 
+import docker
+
+from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour
-from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.utils import open_sending_socket_connection
-from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
 
 DEFAULT_ACK_PORT = 8000
 ACK_MESSAGE = "ACK"
@@ -58,8 +57,8 @@ class LeaderBehaviour(NodeBehaviour):
             )
 
     def _get_worker_nodes(self) -> List[str]:
-        # return [service for service in self._workers_config["services"] if "monitor" not in service]
-        return ["day_histogram_calculator"]
+        return [service for service in self._workers_config["services"]
+                if "monitor" not in service and "rabbit" not in service]
 
     def _check_nodes_up(self):
         logging.info(self._get_worker_nodes())

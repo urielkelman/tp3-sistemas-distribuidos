@@ -1,16 +1,20 @@
+import logging
 import os
 import pickle
 import socket
 from functools import partial
+from multiprocessing import Process
 from pathlib import Path
-import logging
+from time import sleep
+
+from pika.exceptions import AMQPConnectionError
+
 from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
+from tp2_utils.leader_election.ack_process import AckProcess
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, message_is_end
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
-from time import sleep
-from multiprocessing import Process
 
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
 BUSINESSES_READY_PATH = "%s/DOWNLOAD_READY"
@@ -18,14 +22,17 @@ BUSINESSES_DONE_PATH = "%s/DOWNLOAD_DONE"
 JOINING_DONE_PATH = "%s/JOINING_DONE"
 ENDED_PATH = "%s/ENDED"
 PATH_TO_SAVE_BUSINESSES = "%s/businesses.pickle"
+ACK_LISTENING_PORT = 8000
 
 logger = logging.getLogger("root")
+
 
 def wait_for_file_ready(data_path, item):
     if message_is_end(item):
         Path(BUSINESSES_READY_PATH % data_path).touch()
         return [], True
     return [], False
+
 
 def add_location_to_businesses(business_locations, data_path, item):
     if message_is_end(item):
@@ -34,10 +41,11 @@ def add_location_to_businesses(business_locations, data_path, item):
     item['city'] = business_locations[item['business_id']]
     return [item], False
 
+
 def run_process(downloader_host, downloader_port,
                 join_from_queue, output_joined_queue,
                 rabbit_host,
-                data_path = "data"):
+                data_path="data"):
     while True:
         if not os.path.exists(BUSINESSES_READY_PATH % data_path):
             print("Waiting for downloader to be ready")
@@ -93,11 +101,22 @@ def run_process(downloader_host, downloader_port,
         os.remove(JOINING_DONE_PATH % data_path)
         os.remove(ENDED_PATH % data_path)
 
+
 if __name__ == "__main__":
+    ack_process = AckProcess(ACK_LISTENING_PORT, os.getpid())
+    ack_process_aux = Process(target=ack_process.run)
+    ack_process_aux.start()
     downloader_host = os.getenv('DOWNLOADER_HOST')
     downloader_port = int(os.getenv('DOWNLOADER_PORT'))
     join_from_queue = os.getenv('JOIN_FROM_QUEUE')
     output_joined_queue = os.getenv('OUTPUT_JOINED_QUEUE')
     rabbit_host = os.getenv('RABBIT_HOST')
-    run_process(downloader_host, downloader_port, join_from_queue,
-                output_joined_queue, rabbit_host)
+    try:
+        run_process(downloader_host, downloader_port, join_from_queue,
+                    output_joined_queue, rabbit_host)
+    except AMQPConnectionError:
+        sleep(2)
+        logger.info("Retrying connection to rabbit...")
+    except Exception as e:
+        logger.exception("Fatal error in consumer")
+        ack_process_aux.terminate()

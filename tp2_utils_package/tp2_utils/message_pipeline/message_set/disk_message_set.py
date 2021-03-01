@@ -1,13 +1,14 @@
-from typing import Any, NoReturn, Optional, Tuple, Any
 import base64
+import json
 import os
 import pickle
-import pyhash
-import json
 import re
 import shutil
-
 from collections import deque
+from typing import NoReturn, Optional, Tuple, Any
+
+import pyhash
+
 from .message_set import MessageSet
 
 LOGFILE_PATH = "%s/logfile"
@@ -251,4 +252,3 @@ class DiskMessageSet(MessageSet):
         self.bucket_numbers = {}
 
         self.recover_state()
-

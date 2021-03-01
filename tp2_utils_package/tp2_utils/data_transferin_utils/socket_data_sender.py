@@ -1,5 +1,4 @@
 import json
-import logging
 import socket
 
 BYTES_AMOUNT_REQUEST_SIZE = 20
@@ -26,4 +25,3 @@ class SocketDataSender:
         SocketDataSender._send_fixed_size(connection, json_object)
         # logging.info("Sending json object: {}".format(json_object))
         connection.sendall(json_object)
-

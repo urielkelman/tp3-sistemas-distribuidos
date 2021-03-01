@@ -1,16 +1,18 @@
 import argparse
 import logging.config
+import os
 from datetime import datetime
-from functools import partial
-from typing import Dict, List
 from multiprocessing import Process
 from time import sleep
-from pika.exceptions import AMQPConnectionError
+from typing import Dict, List
 
 from config.load_config import load_config
+from pika.exceptions import AMQPConnectionError
 
-from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.leader_election.ack_process import AckProcess
+from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
+
+ACK_LISTENING_PORT = 8000
 
 
 def date_to_weekday(date):
@@ -43,8 +45,6 @@ def consume_func(message_pipeline, item: Dict) -> List[Dict]:
     return message_pipeline.process(item)
 
 
-ACK_LISTENING_PORT = 8000
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         datefmt='%Y-%m-%d %H:%M:%S',
     )
 
-    ack_process = AckProcess(ACK_LISTENING_PORT)
+    ack_process = AckProcess(ACK_LISTENING_PORT, os.getpid())
     ack_process_aux = Process(target=ack_process.run)
     ack_process_aux.start()
 
@@ -66,10 +66,11 @@ if __name__ == "__main__":
                           'equal_to_5': equal_to_5,
                           'is_true': is_true,
                           'leq_than_1': leq_than_1})
+    logger = logging.getLogger('root')
     consumer = RabbitQueueConsumerProducer(host=config.host, consume_queue=config.consume_from,
                                            response_queues=config.produce_to,
                                            messages_to_group=config.messages_to_group,
-                                           callable_commiter=config.message_pipeline, logger=logging.getLogger('root'),
+                                           callable_commiter=config.message_pipeline, logger=logger,
                                            publisher_sharding=config.publisher_sharding)
     continue_trying = True
     while continue_trying:
@@ -77,7 +78,7 @@ if __name__ == "__main__":
             consumer()
         except AMQPConnectionError:
             sleep(2)
-            logging.info("Retrying connection to rabbit...")
-        except OSError:
-            sleep(2)
-            logging.info("Retrying connection to rabbit...")
+            logger.info("Retrying connection to rabbit...")
+        except Exception as e:
+            logger.exception("Fatal error in consumer")
+            ack_process_aux.terminate()

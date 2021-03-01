@@ -2,11 +2,11 @@ from multiprocessing import Process, Manager, Lock, Barrier
 from time import sleep
 from typing import Dict, Tuple
 
-from tp2_utils.leader_election.utils import open_sending_socket_connection
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.bully_message_receiver import BullyMessageReceiver
 from tp2_utils.leader_election.leader_behaviour import LeaderBehaviour
 from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
+from tp2_utils.leader_election.utils import open_sending_socket_connection
 
 LISTEN_BACKLOG = 5
 CONNECTION_LAYER = "CONNECTION"
@@ -15,7 +15,8 @@ ACK_MESSAGE = "ACK"
 
 
 class BullyConnection:
-    def __init__(self, bully_connections_config: Dict[int, Tuple], workers_config: Dict, lowest_port: int, host_id: int):
+    def __init__(self, bully_connections_config: Dict[int, Tuple], workers_config: Dict, lowest_port: int,
+                 host_id: int):
         """
         Initializes connections and bully
         :param bully_connections_config: Dictionary that contains numerical ids of hosts as keys

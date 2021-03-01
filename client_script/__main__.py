@@ -3,10 +3,10 @@ import json
 from datetime import datetime
 from multiprocessing import Process
 
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 from tp2_utils.message_pipeline.message_pipeline import message_is_end, WINDOW_END_MESSAGE
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.rabbit_producer import RabbitQueueProducer
-from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 REVIEWS_QUEUE = 'yelp_reviews_news'
 BUSINESSES_QUEUE = 'yelp_businesses_news'

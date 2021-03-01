@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import ast
-
+import os
 from typing import Dict
+
 from yaml import Loader
 from yaml import load
 
@@ -39,6 +39,7 @@ LOWEST_LISTENING_PORT = 8000
 if __name__ == "__main__":
     bully_config, workers_config = parse_config_params()
     import logging
+
     logging.info(workers_config)
     bully_leader_election_connection = BullyConnection(bully_config["config"], workers_config, LOWEST_LISTENING_PORT,
                                                        bully_config["host_id"])

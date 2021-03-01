@@ -131,14 +131,3 @@ class TestBullyLeaderElection(unittest.TestCase):
         self.assertEqual(self.bully_leader_election_1.get_current_leader(), 3)
         self.assertEqual(self.bully_leader_election_2.get_current_leader(), 3)
         self.assertEqual(self.bully_leader_election_3.get_current_leader(), 3)
-
-
-
-
-
-
-
-
-
-
-

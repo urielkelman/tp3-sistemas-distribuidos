@@ -1,12 +1,11 @@
-import socket
 import logging
-
+import socket
 from multiprocessing import Lock, Barrier
 from typing import Dict
 
-from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
 from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
+from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
 from tp2_utils.leader_election.utils import open_sending_socket_connection
 
@@ -18,7 +17,8 @@ ACK_MESSAGE = "ACK"
 
 class BullyMessageReceiver:
     def __init__(self, host_id: int, port: int, bully_leader_election_dict: Dict[str, BullyLeaderElection],
-                 bully_leader_election_lock: Lock, sending_connections: Dict[int, Connection], open_sockets_barrier: Barrier):
+                 bully_leader_election_lock: Lock, sending_connections: Dict[int, Connection],
+                 open_sockets_barrier: Barrier):
         """
         :param host_id: The identifying number of the node that is running the process.
         :param port: The port of a socket that will listen for messages.
@@ -93,5 +93,7 @@ class BullyMessageReceiver:
                     SocketDataSender.send_json(connection, final_message)
             except (ConnectionResetError, TimeoutError, OSError):
                 logging.exception("Exception in message receiver:")
-                logging.info("Connection with peer {} was reset. Close and reopen socket in port {} to listen if the node restart.".format(address, self._port))
+                logging.info(
+                    "Connection with peer {} was reset. Close and reopen socket in port {} to listen if the node restart.".format(
+                        address, self._port))
                 connection, address = self._accept_connection(sock)

@@ -1,11 +1,10 @@
-import socket
 import logging
+import socket
+from typing import Dict
 
-from tp2_utils.leader_election.node_behaviour import NodeBehaviour
 from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
 from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
-
-from typing import Dict
+from tp2_utils.leader_election.node_behaviour import NodeBehaviour
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -45,8 +44,11 @@ class ReplicaBehaviour(NodeBehaviour):
                 self._bully_leader_election_dict["bully"] = bully_leader_election
                 self._bully_leader_election_lock.release()
                 if possible_leader_messages:
-                    live_connections_hosts_ids = [host_id_and_conn[0] for host_id_and_conn in self._connections.items() if host_id_and_conn[1].socket is not None]
-                    filtered_leader_messages = [leader_message for leader_message in possible_leader_messages if leader_message["destination_process_number"] in live_connections_hosts_ids]
+                    live_connections_hosts_ids = [host_id_and_conn[0] for host_id_and_conn in self._connections.items()
+                                                  if host_id_and_conn[1].socket is not None]
+                    filtered_leader_messages = [leader_message for leader_message in possible_leader_messages if
+                                                leader_message[
+                                                    "destination_process_number"] in live_connections_hosts_ids]
                     # We have to be sure that the message is sent. Otherwise, we can enter an infinite loop of exceptions.
                     for leader_message in filtered_leader_messages:
                         self._send_message(leader_message["destination_process_number"], leader_message)

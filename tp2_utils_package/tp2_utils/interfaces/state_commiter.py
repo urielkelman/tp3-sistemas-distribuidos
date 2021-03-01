@@ -1,5 +1,6 @@
-from typing import Optional, NoReturn, Any
 from abc import abstractmethod
+from typing import Optional, NoReturn, Any
+
 
 class StateCommiter:
     def __init__(self, recover_state_on_init: bool = True,

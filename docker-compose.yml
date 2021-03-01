@@ -10,8 +10,8 @@ services:
       - PORTS=[8000,8000,8000]
       - HOST_ID=1
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./docker-compose.yml:/docker-compose.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/docker-compose.yml
     networks:
       - tp2_net
 
@@ -75,6 +75,7 @@ services:
       interval: 30s
       timeout: 30s
       retries: 3
+    restart: on-failure
 
   initial_review_consumer:
     container_name: initial_review_consumer
@@ -86,7 +87,6 @@ services:
       - configs:/configs
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   day_histogram_calculator:
     container_name: day_histogram_calculator
@@ -125,7 +125,6 @@ services:
       - user_stats_calculator_shard1_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_calculator_shard2:
     container_name: user_stats_calculator_shard2
@@ -139,7 +138,6 @@ services:
       - user_stats_calculator_shard2_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_calculator_shard3:
     container_name: user_stats_calculator_shard3
@@ -153,7 +151,6 @@ services:
       - user_stats_calculator_shard3_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_filter_5_and_unique_text:
     container_name: user_stats_filter_5_and_unique_text
@@ -166,7 +163,6 @@ services:
       - user_stats_filter_5_and_unique_text:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_filter_50:
     container_name: user_stats_filter_50
@@ -179,7 +175,6 @@ services:
       - user_stats_filter_50:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_filter_50_and_5_stars:
     container_name: user_stats_filter_50_and_5_stars
@@ -192,7 +187,6 @@ services:
       - user_stats_filter_50_and_5_stars:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   reviews_funny_counter:
     container_name: reviews_funny_counter
@@ -206,7 +200,6 @@ services:
       - reviews_funny_counter_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   top_10_count_by_city:
     container_name: top_10_count_by_city
@@ -220,7 +213,6 @@ services:
       - top_10_count_by_city_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   business_download_service:
     container_name: business_download_service
@@ -237,7 +229,6 @@ services:
       - download_service_data:/data
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   business_joiner_service:
     container_name: business_joiner_service
@@ -255,7 +246,6 @@ services:
       - joiner_service_data:/data
     depends_on:
       - rabbitmq
-    restart: on-failure
 
 volumes:
   rabbitmq_data:
@@ -264,7 +254,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: "/home/urielkelman/Escritorio/Facultad/Sistemas distribuidos I/TPS/TP3/tp3-sistemas-distribuidos/configs"
+      device: ./configs
   joiner_service_data:
   download_service_data:
   user_stats_calculator_shard1_message_pipeline:

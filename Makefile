@@ -24,4 +24,13 @@ test:
 	docker build -f ./test_dockerfile/Dockerfile -t "test_dockerfile:latest" .
 	docker run --network="host" test_dockerfile:latest
 	docker-compose -f docker-compose-test.yml stop
+
+kill:
+	docker stop $(SERVICE) && docker rm $(SERVICE)
+
+clean:
+	./clean.sh
+
+launch_monitor:
+	docker-compose up -d monitor_$(NUMBER)
 .PHONY: stop
