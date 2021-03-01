@@ -15,13 +15,12 @@ ACK_MESSAGE = "ACK"
 
 
 class BullyConnection:
-    def __init__(self, bully_connections_config: Dict[int, Tuple], workers_config: Dict[str, Dict], lowest_port: int, host_id: int):
+    def __init__(self, bully_connections_config: Dict[int, Tuple], workers_config: Dict, lowest_port: int, host_id: int):
         """
         Initializes connections and bully
         :param bully_connections_config: Dictionary that contains numerical ids of hosts as keys
         and a tuple with the host ip and port that will have a listening socket to receive messages as values.
-        :param workers_config: Dictionary that contains a host to monitor as keys and a dict with all the information
-        associated to the host as values.
+        :param workers_config: Dictionary that contains all the configuration about the running workers in the system.
         :param lowest_port: Integer that represents the lowest port to listen from other nodes.
         :param host_id: Numerical value that represents the id of the host for the bully algorithm.
         """

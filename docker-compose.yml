@@ -9,13 +9,9 @@ services:
       - HOSTS_IPS=["monitor_2", "monitor_3", "monitor_4"]
       - PORTS=[8000,8000,8000]
       - HOST_ID=1
-      - WORKER_HOSTS=["day_histogram_calculator"]
-      - WORKER_IMAGES=["consumer_producer_service:latest"]
-      - WORKER_VOLUMES=[["configs","./configs"]]
-      - WORKER_ENV_VARIABLES=[[]]
-      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+    - ./docker-compose.yml:/docker-compose.yml
     networks:
       - tp2_net
 
@@ -28,12 +24,8 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_3","monitor_4"]
       - PORTS=[8000,8001,8001]
       - HOST_ID=2
-      - WORKER_HOSTS=["day_histogram_calculator"]
-      - WORKER_IMAGES=["consumer_producer_service:latest"]
-      - WORKER_VOLUMES=[["configs","./configs"]]
-      - WORKER_ENV_VARIABLES=[[]]
-      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
     volumes:
+      - ./docker-compose.yml:/docker-compose.yml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
@@ -47,12 +39,8 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_2","monitor_4"]
       - PORTS=[8001,8001,8002]
       - HOST_ID=3
-      - WORKER_HOSTS=["day_histogram_calculator"]
-      - WORKER_IMAGES=["consumer_producer_service:latest"]
-      - WORKER_VOLUMES=[["configs","./configs"]]
-      - WORKER_ENV_VARIABLES=[[]]
-      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
     volumes:
+      - ./docker-compose.yml:/docker-compose.yml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
@@ -66,12 +54,8 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_2","monitor_3"]
       - PORTS=[8002,8002,8002]
       - HOST_ID=4
-      - WORKER_HOSTS=["day_histogram_calculator"]
-      - WORKER_IMAGES=["consumer_producer_service:latest"]
-      - WORKER_VOLUMES=[["configs","./configs"]]
-      - WORKER_ENV_VARIABLES=[[]]
-      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
     volumes:
+      - ./docker-compose.yml:/docker-compose.yml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
@@ -114,10 +98,8 @@ services:
       - configs:/configs
       - day_histogram_calculator_message_pipeline:/data_volume/message_pipeline
       - day_histogram_calculator_message_set:/data_volume/message_set
-
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_calculator_sharderer:
     container_name: user_stats_calculator_sharderer
@@ -130,7 +112,6 @@ services:
       - user_stats_calculator_sharderer:/data_volume/message_set
     depends_on:
       - rabbitmq
-    restart: on-failure
 
   user_stats_calculator_shard1:
     container_name: user_stats_calculator_shard1
@@ -283,7 +264,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ./configs
+      device: "/home/urielkelman/Escritorio/Facultad/Sistemas distribuidos I/TPS/TP3/tp3-sistemas-distribuidos/configs"
   joiner_service_data:
   download_service_data:
   user_stats_calculator_shard1_message_pipeline:

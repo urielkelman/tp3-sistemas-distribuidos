@@ -4,6 +4,8 @@ from datetime import datetime
 from functools import partial
 from typing import Dict, List
 from multiprocessing import Process
+from time import sleep
+from pika.exceptions import AMQPConnectionError
 
 from config.load_config import load_config
 
@@ -69,6 +71,13 @@ if __name__ == "__main__":
                                            messages_to_group=config.messages_to_group,
                                            callable_commiter=config.message_pipeline, logger=logging.getLogger('root'),
                                            publisher_sharding=config.publisher_sharding)
-
-
-    consumer()
+    continue_trying = True
+    while continue_trying:
+        try:
+            consumer()
+        except AMQPConnectionError:
+            sleep(2)
+            logging.info("Retrying connection to rabbit...")
+        except OSError:
+            sleep(2)
+            logging.info("Retrying connection to rabbit...")
