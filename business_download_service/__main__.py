@@ -89,7 +89,7 @@ class SocketDataDownloader():
             if msg == "END":
                 self.clients_ended += 1
                 self._safe_pickle_dump(self.clients_ended, PATH_TO_SAVE_CLIENTS_ENDED % self.data_path)
-                socket_transferer.send_plain_text("RECEIVED")
+                socket_transferer.send_plain_text("REGISTERED")
                 socket_transferer.close()
                 return
             if msg != "SEND FILE":
