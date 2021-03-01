@@ -64,11 +64,10 @@ if __name__ == "__main__":
                           'equal_to_5': equal_to_5,
                           'is_true': is_true,
                           'leq_than_1': leq_than_1})
-    consume_func = partial(consume_func, config.message_pipeline)
     consumer = RabbitQueueConsumerProducer(host=config.host, consume_queue=config.consume_from,
                                            response_queues=config.produce_to,
                                            messages_to_group=config.messages_to_group,
-                                           consume_func=consume_func, logger=logging.getLogger('root'),
+                                           callable_commiter=config.message_pipeline, logger=logging.getLogger('root'),
                                            publisher_sharding=config.publisher_sharding)
 
 

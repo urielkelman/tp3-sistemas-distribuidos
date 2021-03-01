@@ -10,6 +10,8 @@ import pika
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
+from tp2_utils.interfaces.state_commiter import StateCommiter
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
 
 CONSUME_QUEUE = "consume_example"
 RESPONSE_QUEUE = "response_example"
@@ -27,7 +29,8 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         if message and idempotency_set and message in idempotency_set:
             return [], False
         if idempotency_set and message:
-            idempotency_set.add(message)
+            idempotency_set.prepare(message)
+            idempotency_set.commit()
         if isinstance(message["value"], int) or isinstance(message["value"], float):
             return [{"type": message["type"]}] * int(message["value"]), False
         return [], False
@@ -37,13 +40,13 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         if message and idempotency_set and message in idempotency_set:
             return [], False
         if idempotency_set and message:
-            idempotency_set.add(message)
+            idempotency_set.prepare(message)
         if message['key'] != 'Z':
             return [message], False
         else:
             return [message], True
 
-    def _start_process(self, func, messages_to_group=1):
+    def _start_process(self, func: StateCommiter, messages_to_group=1):
         RabbitQueueConsumerProducer("localhost", CONSUME_QUEUE, [RESPONSE_QUEUE], func,
                                     messages_to_group=messages_to_group)()
 
@@ -69,7 +72,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
             cleanup_on_sigterm()
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
         os.mkdir('/tmp/message_set')
-        self.message_set = DiskMessageSet('/tmp/message_set')
+        self.message_set = DiskMessageSet('/tmp/message_set', recover_state_on_init = True)
         self.recv_pipe, self.write_pipe = Pipe(False)
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         self.channel = self.connection.channel()
@@ -90,7 +93,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
 
     def test_simple_filter(self):
-        self.test_process = Process(target=self._start_process, args=(self.consume_filter,))
+        self.test_process = Process(target=self._start_process, args=(DummyStateCommiter(self.consume_filter),))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -118,7 +121,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         self.assertEqual(processed_data[3], {"type": "A", "value": None})
 
     def test_simple_filter_with_grouping(self):
-        self.test_process = Process(target=self._start_process, args=(self.consume_filter, 2))
+        self.test_process = Process(target=self._start_process, args=(DummyStateCommiter(self.consume_filter), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -146,7 +149,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
         self.assertEqual(processed_data[3], [{"type": "A", "value": None}])
 
     def test_simple_multipy_message_with_grouping(self):
-        self.test_process = Process(target=self._start_process, args=(self.publish_multiple, 2))
+        self.test_process = Process(target=self._start_process, args=(DummyStateCommiter(self.publish_multiple), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -174,7 +177,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_idempotency_set_integration(self):
         self.test_process = Process(target=self._start_process,
-                                    args=((lambda m: self.publish_multiple(m, self.message_set)), 2))
+                                    args=(DummyStateCommiter(lambda m: self.publish_multiple(m, self.message_set)), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -205,7 +208,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_simple_stop(self):
         self.test_process = Process(target=self._start_process,
-                                    args=((lambda m: self.republish_and_stop_with_key_z(m, self.message_set)), 2))
+                                    args=(DummyStateCommiter(lambda m: self.republish_and_stop_with_key_z(m, self.message_set)), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,

@@ -26,3 +26,7 @@ message_pipeline:
 message_pipeline_kwargs:
   ends_to_receive: 3
   ends_to_send: 1
+  signature: user_stats_filter_50
+
+message_set_params:
+  set_data_path: /data_volume/message_set

@@ -3,7 +3,7 @@ rabbit_params:
   consume_from: yelp_reviews_user_stats_consumer
   produce_to:
     - yelp_reviews_user_stats_consumer
-  messages_to_group: 1000
+  messages_to_group: 10000
 
 publisher_sharding:
   by_key: user_id
@@ -23,3 +23,9 @@ operations:
 
 message_pipeline:
   - UserStatsProjector
+
+message_pipeline_kwargs:
+  signature: user_stats_calculator_sharderer
+
+message_set_params:
+  set_data_path: /data_volume/message_set

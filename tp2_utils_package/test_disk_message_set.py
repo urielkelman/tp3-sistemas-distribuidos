@@ -96,18 +96,6 @@ class TestDiskMessageSet(unittest.TestCase):
                 query = "%d" % random.randint(i + 1, 100001)
                 self.assertFalse(query.encode() in self.message_set)
 
-    def test_simple_commit_no_changes(self):
-        self.assertFalse(b"test" in self.message_set)
-        self.assertFalse(b"test2" in self.message_set)
-        self.message_set.prepare(b"test")
-        cm_1 = self.message_set.commit()
-        self.assertTrue(b"test" in self.message_set)
-        self.assertFalse(b"test2" in self.message_set)
-        self.message_set.prepare(b"test")
-        cm_2 = self.message_set.commit()
-        self.assertTrue(b"test" in self.message_set)
-        self.assertFalse(b"test2" in self.message_set)
-
     def test_simple_commit_rollback(self):
         self.assertFalse(b"1" in self.message_set)
         self.assertFalse(b"2" in self.message_set)

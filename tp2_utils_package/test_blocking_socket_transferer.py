@@ -5,7 +5,7 @@ import socket
 import unittest
 from multiprocessing import Barrier, Process
 
-from .tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
+from tp2_utils_package.tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
 
 
 def message_sender(barrier, port):
