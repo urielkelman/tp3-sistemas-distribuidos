@@ -134,3 +134,5 @@ dmypy.json
 client_script/*.json
 client_script/*.txt
 download_service_data/*
+
+*.pickle

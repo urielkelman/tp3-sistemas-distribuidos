@@ -10,7 +10,7 @@ import pika
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 
@@ -87,7 +87,7 @@ class TestIntegrations(unittest.TestCase):
     def _setup_message_set(self, location: str):
         shutil.rmtree(location, ignore_errors=True)
         os.mkdir(location)
-        message_set = DiskMessageSet(location)
+        message_set = DiskMessageSetByLastCommit(location)
         self.dirs_to_delete.append(location)
         return message_set
 
@@ -101,14 +101,15 @@ class TestIntegrations(unittest.TestCase):
 
         def consume(write_pipe, ch, method, properties, body):
             write_pipe.send(body)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
             if json.loads(body) == WINDOW_END_MESSAGE:
                 ch.stop_consuming()
+                connection.close()
 
         connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         channel = connection.channel()
         channel.basic_consume(queue=final_queue,
-                              on_message_callback=partial(consume, write_pipe),
-                              auto_ack=True)
+                              on_message_callback=partial(consume, write_pipe))
         channel.start_consuming()
 
     def _setup_pipelineA(self):
@@ -119,7 +120,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineA_step1_queue1')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineA_step1_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
         # 3 consumers that group and count
@@ -133,7 +134,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -145,7 +146,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -157,7 +158,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step1_queue1',
                                          ['pipelineA_step2_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -171,7 +172,7 @@ class TestIntegrations(unittest.TestCase):
                                ends_to_receive=3, ends_to_send=1, stop_at_window_end=True)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step2_queue1',
                                          ['pipelineA_step3_queue1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -185,7 +186,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineA_step3_queue1',
                                          ['pipelineA_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -198,7 +199,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineB_step1_shard2')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineB_step1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
                                          publisher_sharding=PublisherSharding(by_key='key',
                                                                               shards=3))
@@ -214,7 +215,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard0',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -226,7 +227,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard1',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -238,7 +239,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step1_shard2',
                                          ['pipelineB_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -251,7 +252,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineB_step2',
                                          ['pipelineB_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,)
         self._setup_start_process(cp)
         
@@ -264,7 +265,7 @@ class TestIntegrations(unittest.TestCase):
         self._setup_queue('pipelineC_step1_shard2')
         cp = RabbitQueueConsumerProducer("localhost", 'pipeline_start',
                                          ['pipelineC_step1'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP,
                                          publisher_sharding=PublisherSharding(by_key='key',
                                                                               shards=3))
@@ -280,7 +281,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard0',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -292,7 +293,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard1',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -304,7 +305,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step1_shard2',
                                          ['pipelineC_step2'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP)
         self._setup_start_process(cp)
 
@@ -317,7 +318,7 @@ class TestIntegrations(unittest.TestCase):
                                idempotency_set=message_set)
         cp = RabbitQueueConsumerProducer("localhost", 'pipelineC_step2',
                                          ['pipelineC_result'],
-                                         pipe.process,
+                                         pipe,
                                          messages_to_group=DEFAULT_MESSAGES_TO_GROUP, )
         self._setup_start_process(cp)
 
@@ -341,6 +342,10 @@ class TestIntegrations(unittest.TestCase):
             p.terminate()
         for l in self.dirs_to_delete:
             shutil.rmtree(l, ignore_errors=True)
+        for q in self.queues_to_purge:
+            self.channel.queue_purge(q)
+        self.channel.close()
+        self.connection.close()
 
     def test_count_pipeline_A_ending_1(self):
         self._setup_pipelineA()
@@ -348,8 +353,11 @@ class TestIntegrations(unittest.TestCase):
                                                                    'pipelineA_result'))
         consume_process.start()
         for element in MESSAGES_FOR_TESTING_ENDING_1[1:]:
-            self.channel.basic_publish(exchange='', routing_key='pipeline_start',
+            try:
+                self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
+            except Exception as e:
+                print(e)
         consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
