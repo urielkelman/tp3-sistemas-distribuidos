@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 from tp2_utils.leader_election.utils import open_sending_socket_connection
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.bully_message_receiver import BullyMessageReceiver
-from tp2_utils.leader_election.node_behaviour import NodeBehaviour
+from tp2_utils.leader_election.leader_behaviour import LeaderBehaviour
 from tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
 
 LISTEN_BACKLOG = 5
@@ -15,14 +15,17 @@ ACK_MESSAGE = "ACK"
 
 
 class BullyConnection:
-    def __init__(self, bully_connections_config: Dict[int, Tuple], lowest_port: int, host_id: int):
+    def __init__(self, bully_connections_config: Dict[int, Tuple], workers_config: Dict[str, Dict], lowest_port: int, host_id: int):
         """
         Initializes connections and bully
         :param bully_connections_config: Dictionary that contains numerical ids of hosts as keys
         and a tuple with the host ip and port that will have a listening socket to receive messages as values.
+        :param workers_config: Dictionary that contains a host to monitor as keys and a dict with all the information
+        associated to the host as values.
         :param lowest_port: Integer that represents the lowest port to listen from other nodes.
         :param host_id: Numerical value that represents the id of the host for the bully algorithm.
         """
+        self._workers_config = workers_config
         self._bully_connections_config = bully_connections_config
         self._host_id = host_id
         self._sockets_to_send_messages = {}
@@ -64,8 +67,8 @@ class BullyConnection:
                                                      self._bully_leader_election_lock)
                 replica_behaviour.execute_tasks()
             else:
-                replica_behaviour = NodeBehaviour(self._sending_connections, self._bully_leader_election_dict,
-                                                  self._bully_leader_election_lock)
+                replica_behaviour = LeaderBehaviour(self._sending_connections, self._bully_leader_election_dict,
+                                                    self._bully_leader_election_lock, self._workers_config)
                 replica_behaviour.execute_tasks()
             sleep(3)
 

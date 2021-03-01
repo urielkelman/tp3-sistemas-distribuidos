@@ -2,8 +2,8 @@ import socket
 import logging
 
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour
-from tp2_utils.json_utils.json_receiver import JsonReceiver
-from tp2_utils.json_utils.json_sender import JsonSender
+from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
 
 from typing import Dict
 
@@ -27,8 +27,8 @@ class ReplicaBehaviour(NodeBehaviour):
                 connection = self._connections[host_id].socket
                 if not connection:
                     raise ConnectionRefusedError
-                JsonSender.send_json(connection, self._generate_bully_message(message))
-                response = JsonReceiver.receive_json(connection)
+                SocketDataSender.send_json(connection, self._generate_bully_message(message))
+                response = SocketDataReceiver.receive_json(connection)
                 if response["layer"] == self.BULLY_LAYER:
                     self._bully_leader_election_lock.acquire()
                     bully_leader_election = self._bully_leader_election_dict["bully"]
@@ -66,6 +66,7 @@ class ReplicaBehaviour(NodeBehaviour):
             self._send_message(election_message["destination_process_number"], election_message)
 
     def execute_tasks(self):
+        logging.info("Execute replica tasks.")
         self._check_connections()
         if self._bully_leader_election_dict['bully'].get_current_leader() == -1:
             self._send_election_messages()

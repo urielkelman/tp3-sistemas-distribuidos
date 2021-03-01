@@ -9,6 +9,13 @@ services:
       - HOSTS_IPS=["monitor_2", "monitor_3", "monitor_4"]
       - PORTS=[8000,8000,8000]
       - HOST_ID=1
+      - WORKER_HOSTS=["day_histogram_calculator"]
+      - WORKER_IMAGES=["consumer_producer_service:latest"]
+      - WORKER_VOLUMES=[["configs","./configs"]]
+      - WORKER_ENV_VARIABLES=[[]]
+      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
 
@@ -21,6 +28,13 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_3","monitor_4"]
       - PORTS=[8000,8001,8001]
       - HOST_ID=2
+      - WORKER_HOSTS=["day_histogram_calculator"]
+      - WORKER_IMAGES=["consumer_producer_service:latest"]
+      - WORKER_VOLUMES=[["configs","./configs"]]
+      - WORKER_ENV_VARIABLES=[[]]
+      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
 
@@ -33,6 +47,13 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_2","monitor_4"]
       - PORTS=[8001,8001,8002]
       - HOST_ID=3
+      - WORKER_HOSTS=["day_histogram_calculator"]
+      - WORKER_IMAGES=["consumer_producer_service:latest"]
+      - WORKER_VOLUMES=[["configs","./configs"]]
+      - WORKER_ENV_VARIABLES=[[]]
+      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
 
@@ -45,6 +66,13 @@ services:
       - HOSTS_IPS=["monitor_1","monitor_2","monitor_3"]
       - PORTS=[8002,8002,8002]
       - HOST_ID=4
+      - WORKER_HOSTS=["day_histogram_calculator"]
+      - WORKER_IMAGES=["consumer_producer_service:latest"]
+      - WORKER_VOLUMES=[["configs","./configs"]]
+      - WORKER_ENV_VARIABLES=[[]]
+      - WORKER_ENTRYPOINTS=["python3 /__main__.py --config /configs/day_histogram_calculator.yml"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - tp2_net
 
@@ -83,7 +111,7 @@ services:
     networks:
       - tp2_net
     volumes:
-      - ./configs:/configs
+      - "configs:/configs"
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -233,6 +261,13 @@ services:
 
 volumes:
   rabbitmq_data:
+  configs:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./configs
+
 networks:
   tp2_net:
     ipam:

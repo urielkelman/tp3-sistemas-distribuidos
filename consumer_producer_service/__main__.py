@@ -3,10 +3,12 @@ import logging.config
 from datetime import datetime
 from functools import partial
 from typing import Dict, List
+from multiprocessing import Process
 
 from config.load_config import load_config
 
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
+from tp2_utils.leader_election.ack_process import AckProcess
 
 
 def date_to_weekday(date):
@@ -39,12 +41,19 @@ def consume_func(message_pipeline, item: Dict) -> List[Dict]:
     return message_pipeline.process(item)
 
 
+ACK_LISTENING_PORT = 8000
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
     )
+
+    ack_process = AckProcess(ACK_LISTENING_PORT)
+    ack_process_aux = Process(target=ack_process.run)
+    ack_process_aux.start()
+
     parser = argparse.ArgumentParser(description='Rabbit producer consumer')
     parser.add_argument('--config', help="The config file to use", required=True)
     args = parser.parse_args()
@@ -61,4 +70,6 @@ if __name__ == "__main__":
                                            messages_to_group=config.messages_to_group,
                                            consume_func=consume_func, logger=logging.getLogger('root'),
                                            publisher_sharding=config.publisher_sharding)
+
+
     consumer()

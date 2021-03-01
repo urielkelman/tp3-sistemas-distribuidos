@@ -1,13 +1,13 @@
 import json
-import logging
 import select
+import socket
 
 BYTES_AMOUNT_REQUEST_SIZE = 20
 
 
-class JsonReceiver:
+class SocketDataReceiver:
     @staticmethod
-    def _receive_fixed_size(connection, size):
+    def receive_fixed_size(connection: socket.socket, size: int):
         buffer = ""
 
         while len(buffer) < size:
@@ -22,9 +22,9 @@ class JsonReceiver:
         return buffer
 
     @staticmethod
-    def receive_json(connection):
-        request_size = int(JsonReceiver._receive_fixed_size(connection, BYTES_AMOUNT_REQUEST_SIZE))
-        data = JsonReceiver._receive_fixed_size(connection, request_size)
+    def receive_json(connection: socket.socket):
+        request_size = int(SocketDataReceiver.receive_fixed_size(connection, BYTES_AMOUNT_REQUEST_SIZE))
+        data = SocketDataReceiver.receive_fixed_size(connection, request_size)
         # logging.info("Json received: {}".format(data))
         # logging.info("Address: {}".format(connection.getpeername()))
 

@@ -5,8 +5,8 @@ from multiprocessing import Lock, Barrier
 from typing import Dict
 
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-from tp2_utils.json_utils.json_receiver import JsonReceiver
-from tp2_utils.json_utils.json_sender import JsonSender
+from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
 from tp2_utils.leader_election.connection import Connection
 from tp2_utils.leader_election.utils import open_sending_socket_connection
 
@@ -73,10 +73,10 @@ class BullyMessageReceiver:
         sock, connection, address = self.create_socket()
         while True:
             try:
-                message = JsonReceiver.receive_json(connection)
+                message = SocketDataReceiver.receive_json(connection)
                 self._check_open_sending_connection(message["host_id"])
                 if message["layer"] == CONNECTION_LAYER:
-                    JsonSender.send_json(connection, self._generate_ack_message(message["host_id"]))
+                    SocketDataSender.send_json(connection, self._generate_ack_message(message["host_id"]))
 
                 elif message["layer"] == BULLY_LAYER:
                     self._bully_leader_election_lock.acquire()
@@ -90,7 +90,7 @@ class BullyMessageReceiver:
                     else:
                         final_message = self._generate_ack_message(message["host_id"])
 
-                    JsonSender.send_json(connection, final_message)
+                    SocketDataSender.send_json(connection, final_message)
             except (ConnectionResetError, TimeoutError, OSError):
                 logging.exception("Exception in message receiver:")
                 logging.info("Connection with peer {} was reset. Close and reopen socket in port {} to listen if the node restart.".format(address, self._port))

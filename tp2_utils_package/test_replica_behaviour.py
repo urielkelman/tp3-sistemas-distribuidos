@@ -8,8 +8,8 @@ from typing import List, Optional
 
 from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from .tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
-from .tp2_utils.json_utils.json_receiver import JsonReceiver
-from .tp2_utils.json_utils.json_sender import JsonSender
+from .tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
+from .tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
 
 BULLY_LAYER = "BULLY"
 CONNECTION_LAYER = "CONNECTION"
