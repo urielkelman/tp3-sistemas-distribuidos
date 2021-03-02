@@ -59,7 +59,6 @@ class LeaderBehaviour(NodeBehaviour):
                 if "monitor" not in service and "rabbit" not in service]
 
     def _check_nodes_up(self):
-        logging.info(self._get_worker_nodes())
         for worker_node in self._get_worker_nodes():
             connection = open_sending_socket_connection(worker_node, DEFAULT_ACK_PORT)
             if connection.socket is not None:
@@ -73,6 +72,5 @@ class LeaderBehaviour(NodeBehaviour):
                 self._restart_node(worker_node)
 
     def execute_tasks(self):
-        logging.info("Execute leader tasks.")
         self._check_connections()
         self._check_nodes_up()
