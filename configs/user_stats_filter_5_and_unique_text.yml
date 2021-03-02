@@ -30,6 +30,7 @@ message_pipeline:
   - UserProjector
 
 message_pipeline_kwargs:
+  data_path: /data_volume/message_pipeline
   ends_to_receive: 3
   ends_to_send: 1
   signature: user_stats_filter_5_and_unique_text

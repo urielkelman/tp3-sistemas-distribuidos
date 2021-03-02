@@ -160,7 +160,8 @@ services:
       - tp2_net
     volumes:
       - configs:/configs
-      - user_stats_filter_5_and_unique_text:/data_volume/message_set
+      - user_stats_filter_5_and_unique_text_message_pipeline:/data_volume/message_pipeline
+      - user_stats_filter_5_and_unique_text_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
 
@@ -172,7 +173,8 @@ services:
       - tp2_net
     volumes:
       - configs:/configs
-      - user_stats_filter_50:/data_volume/message_set
+      - user_stats_filter_50_message_pipeline:/data_volume/message_pipeline
+      - user_stats_filter_50_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
 
@@ -184,7 +186,8 @@ services:
       - tp2_net
     volumes:
       - configs:/configs
-      - user_stats_filter_50_and_5_stars:/data_volume/message_set
+      - user_stats_filter_50_and_5_stars_message_pipeline:/data_volume/message_pipeline
+      - user_stats_filter_50_and_5_stars_message_set:/data_volume/message_set
     depends_on:
       - rabbitmq
 
@@ -265,9 +268,12 @@ volumes:
   user_stats_calculator_shard3_message_set:
   day_histogram_calculator_message_pipeline:
   day_histogram_calculator_message_set:
-  user_stats_filter_5_and_unique_text:
-  user_stats_filter_50:
-  user_stats_filter_50_and_5_stars:
+  user_stats_filter_5_and_unique_text_message_pipeline:
+  user_stats_filter_5_and_unique_text_message_set:
+  user_stats_filter_50_message_pipeline:
+  user_stats_filter_50_message_set:
+  user_stats_filter_50_and_5_stars_message_pipeline:
+  user_stats_filter_50_and_5_stars_message_set:
   user_stats_calculator_sharderer:
   top_10_count_by_city_message_pipeline:
   top_10_count_by_city_message_set:

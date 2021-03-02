@@ -358,7 +358,6 @@ class TestIntegrations(unittest.TestCase):
                                            body=json.dumps(element))
             except Exception as e:
                 print(e)
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -371,6 +370,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)
 
     def test_count_pipeline_A_ending_2(self):
@@ -381,7 +381,6 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_2[1:]:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -394,6 +393,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)
 
     def test_count_pipeline_B_ending_1(self):
@@ -404,7 +404,6 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_1:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -417,6 +416,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)
 
     def test_count_pipeline_B_ending_2(self):
@@ -427,7 +427,6 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_2:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -440,6 +439,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)
 
     def test_count_pipeline_C_process_twice(self):
@@ -450,7 +450,6 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_1:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -463,6 +462,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)
 
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
@@ -471,7 +471,6 @@ class TestIntegrations(unittest.TestCase):
         for element in MESSAGES_FOR_TESTING_ENDING_2:
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps(element))
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -484,4 +483,5 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual(TESTING_RESULT, count_result)

@@ -170,7 +170,7 @@ class TestIntegrations(unittest.TestCase):
             p.start()
             write_chaos.send(p.pid)
             self.processes_to_join[i] = (p, self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(0.4, size=1)[0] + 0.05)
+            sleep(np.random.poisson(0.6, size=1)[0] + 0.05)
 
     def test_without_chaos_monkey(self):
         random.seed(0)
@@ -193,7 +193,6 @@ class TestIntegrations(unittest.TestCase):
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
                                                                    'pipelineC_result'))
         consume_process.start()
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -206,6 +205,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
 
     def test_with_chaos_monkey(self):
@@ -231,7 +231,6 @@ class TestIntegrations(unittest.TestCase):
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
                                                                    'pipelineC_result'))
         consume_process.start()
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -244,6 +243,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
         self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
@@ -277,7 +277,6 @@ class TestIntegrations(unittest.TestCase):
         consume_process = Process(target=self._read_process, args=(self.write_pipe,
                                                                    'pipelineC_result'))
         consume_process.start()
-        consume_process.join()
         processed_data = []
         while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
             processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -290,6 +289,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
+        consume_process.join()
         self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
         self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
@@ -321,7 +321,6 @@ class TestIntegrations(unittest.TestCase):
             consume_process = Process(target=self._read_process, args=(self.write_pipe,
                                                                        'pipelineC_result'))
             consume_process.start()
-            consume_process.join()
             processed_data = []
             while not processed_data or processed_data[-1] != WINDOW_END_MESSAGE:
                 processed_data.append(json.loads(self.recv_pipe.recv()))
@@ -334,6 +333,7 @@ class TestIntegrations(unittest.TestCase):
                         count_result[item['key']] = item['count']
                 else:
                     count_result[resp['key']] = resp['count']
+            consume_process.join()
             self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
             for q in self.queues_to_purge:
                 self.channel.queue_purge(q)
