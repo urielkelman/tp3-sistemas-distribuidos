@@ -1,12 +1,12 @@
 import base64
 import json
+import logging
 import os
 import re
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, NoReturn
 
 import dill
-import logging
 
 from tp2_utils.interfaces.state_commiter import StateCommiter
 from tp2_utils.message_pipeline.message_set.message_set import MessageSet
@@ -119,13 +119,28 @@ class MessagePipeline(StateCommiter):
             logfile = open(LOG_LOCATION % self.data_path, "r")
             cn = lower_commit_number
             temp_items_to_recover = []
-            items_to_recover = []
             line = logfile.readline()
             while line:
                 if re.match(END_COMMIT_REGEX, line):
                     cn = int(re.findall(END_COMMIT_REGEX, line)[0])
                     if cn > lower_commit_number:
-                        items_to_recover += temp_items_to_recover
+                        # Recover state in operations and ens received
+                        for item in temp_items_to_recover:
+                            if message_is_end(item):
+                                self.ends_received += 1
+                            items_to_process = [item]
+                            for op in self.operations:
+                                new_items_to_process = []
+                                for item in items_to_process:
+                                    new_items_to_process += op.process(item)
+                                items_to_process = new_items_to_process
+                        if cn % self.commits_until_save == 0:
+                            with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn), 'wb') as commit_file:
+                                dill.dump((self.operations, self.ends_received), commit_file)
+                            if (cn > self.commits_until_save and
+                                    os.path.exists(
+                                        ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))):
+                                os.remove(ROTATING_COMMIT_SAVE_PATH % (self.data_path, cn - self.commits_until_save))
                         temp_items_to_recover = []
                     else:
                         temp_items_to_recover = []
@@ -139,15 +154,6 @@ class MessagePipeline(StateCommiter):
                 line = logfile.readline()
             logfile.close()
             self.logfile = open(LOG_LOCATION % self.data_path, "a")
-            for item in items_to_recover:
-                if message_is_end(item):
-                    self.ends_received += 1
-                items_to_process = [item]
-                for op in self.operations:
-                    new_items_to_process = []
-                    for item in items_to_process:
-                        new_items_to_process += op.process(item)
-                    items_to_process = new_items_to_process
             self.logfile.write(CANCEL_SECTION)
             self.logfile.flush()
             return cn
@@ -227,11 +233,14 @@ class MessagePipeline(StateCommiter):
                     self.operations, self.ends_received = dill.load(commit_file)
                     self.commit_number = max(available_commits)
             except Exception:
-                with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
-                                                       max(available_commits) - self.commits_until_save),
-                          'rb') as commit_file:
-                    self.operations, self.ends_received = dill.load(commit_file)
-                    self.commit_number = max(available_commits) - self.commits_until_save
+                if max(available_commits) - self.commits_until_save > 0:
+                    with open(ROTATING_COMMIT_SAVE_PATH % (self.data_path,
+                                                           max(available_commits) - self.commits_until_save),
+                              'rb') as commit_file:
+                        self.operations, self.ends_received = dill.load(commit_file)
+                        self.commit_number = max(available_commits) - self.commits_until_save
+                else:
+                    self.commit_number = 1
             self.commit_number = self._restore_up_to_last_commit(self.commit_number)
             if self.idempotency_set:
                 try:

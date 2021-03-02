@@ -7,6 +7,7 @@ from multiprocessing import Process
 from pathlib import Path
 from time import sleep
 from typing import Optional, NoReturn, Any, Callable
+
 from pika.exceptions import AMQPConnectionError
 
 from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
@@ -16,7 +17,6 @@ from tp2_utils.leader_election.ack_process import AckProcess
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, message_is_end
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
 BUSINESSES_READY_PATH = "%s/DOWNLOAD_READY"
@@ -90,7 +90,7 @@ class BusinessJoiner(StateCommiter):
             file = open(PATH_TO_COMMITS_NUMBERS % self.data_path, "a")
         else:
             file = open(PATH_TO_COMMITS_NUMBERS % self.data_path, "w")
-        file.write(str(cn)+'\n')
+        file.write(str(cn) + '\n')
         file.close()
         self.commit_number += 1
         return cn
@@ -122,6 +122,7 @@ class BusinessJoiner(StateCommiter):
         if self.flush_at_next_commit:
             self.flush()
             self.flush_at_next_commit = False
+
 
 def run_process(downloader_host, downloader_port,
                 join_from_queue, output_joined_queue,
