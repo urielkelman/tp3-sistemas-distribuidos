@@ -26,7 +26,7 @@ BUSINESSES_READY = '%s/BUSINESSES_READY'
 SAFE_BACKUP_END = ".copy"
 ACK_LISTENING_PORT = 8000
 
-logger = logging.getLogger("root")
+logger = logging.getLogger()
 
 
 class SocketDataDownloader():
@@ -148,6 +148,7 @@ class DataGatherer:
             Path(BUSINESSES_READY % self.data_path).touch()
             self.logfile.close()
             os.remove(PATH_TO_SAVE_LOGFILE % self.data_path)
+            logging.info("Business gathering ended")
             return [BroadcastMessage(WINDOW_END_MESSAGE)], True
         else:
             self.logfile.write("%s\n" % json.dumps(item))
@@ -175,7 +176,7 @@ def run_process(port, listen_backlog, rabbit_host, clients,
     socket_downloader = SocketDataDownloader(port, listen_backlog, clients, data_path)
     while True:
         if not os.path.exists(BUSINESSES_READY % data_path):
-            print("Consuming businesses")
+            logger.info("Consuming businesses")
             data_gatherer = DataGatherer(data_path)
             cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
                                              [BUSINESS_NOTIFY_END],
@@ -198,18 +199,27 @@ def run_process(port, listen_backlog, rabbit_host, clients,
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
     ack_process = AckProcess(ACK_LISTENING_PORT, os.getpid())
     ack_process_aux = Process(target=ack_process.run)
     ack_process_aux.start()
+    logger.info("Starting business downloader")
     port = int(os.getenv('PORT'))
     listen_backlog = int(os.getenv('LISTEN_BACKLOG'))
     rabbit_host = os.getenv('RABBIT_HOST')
     clients = int(os.getenv('CLIENTS'))
-    try:
-        run_process(port, listen_backlog, rabbit_host, clients)
-    except AMQPConnectionError:
-        sleep(2)
-        logger.info("Retrying connection to rabbit...")
-    except Exception as e:
-        logger.exception("Fatal error in consumer")
-        ack_process_aux.terminate()
+    while True:
+        try:
+            run_process(port, listen_backlog, rabbit_host, clients)
+        except AMQPConnectionError:
+            sleep(2)
+            logger.info("Retrying connection to rabbit...")
+        except Exception as e:
+            logger.exception("Fatal error in consumer")
+            ack_process_aux.terminate()
+            raise e

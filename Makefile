@@ -19,6 +19,7 @@ logs:
 stop:
 	docker-compose -f docker-compose.yml stop -t 1
 	docker-compose -f docker-compose.yml down
+	make clean
 test:
 	docker-compose -f docker-compose-test.yml up -d
 	docker build -f ./test_dockerfile/Dockerfile -t "test_dockerfile:latest" .

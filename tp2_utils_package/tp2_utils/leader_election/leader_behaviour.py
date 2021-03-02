@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import docker
 
-from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transfering_utils.socket_data_receiver import SocketDataReceiver
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour

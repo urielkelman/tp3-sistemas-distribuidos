@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, NoReturn
 
 import dill
+import logging
 
 from tp2_utils.interfaces.state_commiter import StateCommiter
 from tp2_utils.message_pipeline.message_set.message_set import MessageSet
@@ -160,6 +161,7 @@ class MessagePipeline(StateCommiter):
         Commits the prepared changes
         :return: a commit number
         """
+        logging.info("Commiting changes in pipeline")
         if self.idempotency_set:
             cn = self.idempotency_set.commit()
             self.commit_number = cn
@@ -183,8 +185,8 @@ class MessagePipeline(StateCommiter):
             return [], False
         if message_is_end(item):
             self.ends_received += 1
-            if self.idempotency_set:
-                self.idempotency_set.prepare((item if not message_is_end(item) else WINDOW_END_MESSAGE))
+            if self.idempotency_set and item:
+                self.idempotency_set.prepare(item)
             item = WINDOW_END_MESSAGE
             if self.ends_received < self.ends_to_receive:
                 return [], False

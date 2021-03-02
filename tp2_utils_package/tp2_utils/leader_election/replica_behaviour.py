@@ -2,8 +2,8 @@ import logging
 import socket
 from typing import Dict
 
-from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
-from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
+from tp2_utils.data_transfering_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transfering_utils.socket_data_sender import SocketDataSender
 from tp2_utils.leader_election.node_behaviour import NodeBehaviour
 
 logging.basicConfig(
