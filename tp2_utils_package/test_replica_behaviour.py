@@ -1,19 +1,5 @@
-import unittest
-import socket
-import traceback
-import random
-
-from multiprocessing import Queue, Process, Semaphore
-from typing import List, Optional
-
-from .tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
-from .tp2_utils.leader_election.replica_behaviour import ReplicaBehaviour
-from .tp2_utils.json_utils.json_receiver import JsonReceiver
-from .tp2_utils.json_utils.json_sender import JsonSender
-
 BULLY_LAYER = "BULLY"
 CONNECTION_LAYER = "CONNECTION"
-
 
 # class TestReplicaBehaviour(unittest.TestCase):
 #     TEST_PORT_1 = random.randint(8000, 9000)

@@ -7,11 +7,12 @@ from multiprocessing import Process, Pipe
 from typing import Dict, List, Tuple
 
 import pika
-from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
+
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
+from tp2_utils.interfaces.state_commiter import StateCommiter
 from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
-from tp2_utils.interfaces.state_commiter import StateCommiter
-from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
+from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
 
 CONSUME_QUEUE = "consume_example"
 RESPONSE_QUEUE = "response_example"
@@ -72,7 +73,7 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
             cleanup_on_sigterm()
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
         os.mkdir('/tmp/message_set')
-        self.message_set = DiskMessageSet('/tmp/message_set', recover_state_on_init = True)
+        self.message_set = DiskMessageSet('/tmp/message_set', recover_state_on_init=True)
         self.recv_pipe, self.write_pipe = Pipe(False)
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         self.channel = self.connection.channel()
@@ -208,7 +209,8 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_simple_stop(self):
         self.test_process = Process(target=self._start_process,
-                                    args=(DummyStateCommiter(lambda m: self.republish_and_stop_with_key_z(m, self.message_set)), 2))
+                                    args=(DummyStateCommiter(
+                                        lambda m: self.republish_and_stop_with_key_z(m, self.message_set)), 2))
         self.test_process.start()
         self.channel.queue_declare(queue=CONSUME_QUEUE)
         self.channel.basic_publish(exchange='', routing_key=CONSUME_QUEUE,
@@ -227,7 +229,8 @@ class TestRabbitQueueConsumerProducer(unittest.TestCase):
 
     def test_stop_on_first_message(self):
         def return_stop(msg):
-            return [BroadcastMessage({})]*10, True
+            return [BroadcastMessage({})] * 10, True
+
         self.test_process = Process(target=self._start_process,
                                     args=(return_stop, 1))
         self.test_process.start()

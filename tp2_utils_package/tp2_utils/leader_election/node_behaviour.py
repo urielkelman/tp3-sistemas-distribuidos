@@ -1,13 +1,13 @@
 import logging
 import socket
-
+from abc import abstractmethod
 from multiprocessing import Lock
 from typing import Dict
 
+from tp2_utils.data_transfering_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transfering_utils.socket_data_sender import SocketDataSender
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
-from tp2_utils.json_utils.json_receiver import JsonReceiver
-from tp2_utils.json_utils.json_sender import JsonSender
 
 
 class NodeBehaviour:
@@ -34,15 +34,14 @@ class NodeBehaviour:
         """
         bully_leader_election = self._bully_leader_election_dict['bully']
         leader_id = bully_leader_election.get_current_leader()
-        logging.info("Actual leader id: " + str(leader_id))
         hosts_ids = bully_leader_election.get_hosts_ids()
         for host_id in hosts_ids:
             if host_id != bully_leader_election.get_id():
                 connection = self._connections[host_id]
                 try:
                     if connection.socket:
-                        JsonSender.send_json(connection.socket, self._generate_ack_message(host_id))
-                        JsonReceiver.receive_json(connection.socket)
+                        SocketDataSender.send_json(connection.socket, self._generate_ack_message(host_id))
+                        SocketDataReceiver.receive_json(connection.socket)
                 except (socket.timeout, socket.gaierror, ConnectionRefusedError, OSError):
                     logging.exception("Connection with host: {} is lost".format(host_id))
                     connection.socket.close()
@@ -55,9 +54,9 @@ class NodeBehaviour:
                         self._bully_leader_election_dict["bully"] = bully_leader_election
                         self._bully_leader_election_lock.release()
 
+    @abstractmethod
     def execute_tasks(self):
-        self._check_connections()
-        logging.info("executing leaders tasks...")
+        pass
 
     def _generate_bully_message(self, message):
         return {

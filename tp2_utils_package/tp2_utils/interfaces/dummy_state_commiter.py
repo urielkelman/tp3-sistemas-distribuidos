@@ -1,5 +1,7 @@
 from typing import Optional, NoReturn, Any, Callable
+
 from tp2_utils.interfaces.state_commiter import StateCommiter
+
 
 class DummyStateCommiter(StateCommiter):
     def __init__(self, func: Callable):

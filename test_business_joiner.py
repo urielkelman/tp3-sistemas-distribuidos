@@ -1,15 +1,17 @@
 import json
 import os
+import random
 import shutil
 import unittest
-import random
 from functools import partial
 from multiprocessing import Process, Pipe
+from time import sleep
+
 import pika
-from tp2_utils_package.tp2_utils.message_pipeline.message_pipeline import message_is_end, WINDOW_END_MESSAGE
+
 from business_download_service.__main__ import run_process as run_downloader
 from business_joiner_service.__main__ import run_process as run_joiner
-from time import sleep
+from tp2_utils_package.tp2_utils.message_pipeline.message_pipeline import message_is_end, WINDOW_END_MESSAGE
 
 
 class TestBusinessJoiner(unittest.TestCase):
@@ -101,7 +103,7 @@ class TestBusinessJoiner(unittest.TestCase):
                                           '/tmp/downloader_data'))
         self._setup_start_process(partial(run_joiner,
                                           "localhost", TestBusinessJoiner.PORT_TO_USE,
-                                          "queue_to_join","pipeline_result","localhost",
+                                          "queue_to_join", "pipeline_result", "localhost",
                                           '/tmp/joiner_data'))
         for i in range(QUANTITY_FOR_TESTING):
             element = {"city": "Ciudad%d" % i, 'business_id': i}

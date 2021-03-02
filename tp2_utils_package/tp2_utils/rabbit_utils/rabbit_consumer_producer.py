@@ -1,13 +1,13 @@
 import json
 import logging
 from functools import partial
-from typing import Callable, NoReturn, Optional, Dict, List, Tuple
+from typing import NoReturn, Optional, List
 
 import pika
 
+from tp2_utils.interfaces.state_commiter import StateCommiter
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-from tp2_utils.interfaces.state_commiter import StateCommiter
 
 PUBLISH_SHARDING_FORMAT = "%s_shard%d"
 
@@ -34,12 +34,12 @@ class RabbitQueueConsumerProducer:
                         for r in resp:
                             responses.append(r)
             else:
-                    messages.append(data)
-                    resp, _stop = callable_commiter.prepare(data)
-                    stop_consuming = _stop or stop_consuming
-                    if resp:
-                        for r in resp:
-                            responses.append(r)
+                messages.append(data)
+                resp, _stop = callable_commiter.prepare(data)
+                stop_consuming = _stop or stop_consuming
+                if resp:
+                    for r in resp:
+                        responses.append(r)
         except Exception as e:
             if RabbitQueueConsumerProducer.logger:
                 RabbitQueueConsumerProducer.logger.exception("Exception while consuming message")
@@ -143,6 +143,7 @@ class RabbitQueueConsumerProducer:
         """
         if logger:
             RabbitQueueConsumerProducer.logger = logger
+            logger.info("Instantiating rabbit comsumer producer")
         self.consume_queue = consume_queue
         self.response_queues = response_queues
         self.messages_to_group = messages_to_group
@@ -165,6 +166,8 @@ class RabbitQueueConsumerProducer:
             self.channel.basic_consume(queue=self.consume_queue,
                                        on_message_callback=callable_commiter,
                                        auto_ack=False)
+            if RabbitQueueConsumerProducer.logger:
+                RabbitQueueConsumerProducer.logger.info("Starting message consumption")
             self.channel.start_consuming()
         except Exception as e:
             if RabbitQueueConsumerProducer.logger:

@@ -1,16 +1,21 @@
+import json
+import logging
 import os
 import pickle
+import shutil
 import socket
+from multiprocessing import Process
 from pathlib import Path
+from time import sleep
+
+from pika.exceptions import AMQPConnectionError
+
 from tp2_utils.blocking_socket_transferer import BlockingSocketTransferer
+from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
+from tp2_utils.leader_election.ack_process import AckProcess
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, message_is_end
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-from tp2_utils.interfaces.dummy_state_commiter import DummyStateCommiter
-from multiprocessing import Process
-import json
-import logging
-import shutil
 
 BUSINESSES_QUEUE = 'yelp_businesses_news'
 BUSINESS_NOTIFY_END = 'notify_business_load_end'
@@ -19,14 +24,15 @@ PATH_TO_SAVE_CLIENTS_ENDED = "%s/clients_ended.pickle"
 PATH_TO_SAVE_LOGFILE = '%s/logfile'
 BUSINESSES_READY = '%s/BUSINESSES_READY'
 SAFE_BACKUP_END = ".copy"
+ACK_LISTENING_PORT = 8000
 
-logger = logging.getLogger("root")
+logger = logging.getLogger()
 
 
 class SocketDataDownloader():
     def _safe_pickle_dump(self, obj, path):
         if os.path.exists(path):
-            shutil.copy2(path, path+SAFE_BACKUP_END)
+            shutil.copy2(path, path + SAFE_BACKUP_END)
         with open(path, "wb") as dumpfile:
             pickle.dump(obj, dumpfile)
 
@@ -113,6 +119,7 @@ class SocketDataDownloader():
         c, addr = self._server_socket.accept()
         return c
 
+
 class DataGatherer:
     def __init__(self, data_path):
         self.business_locations = {}
@@ -141,6 +148,7 @@ class DataGatherer:
             Path(BUSINESSES_READY % self.data_path).touch()
             self.logfile.close()
             os.remove(PATH_TO_SAVE_LOGFILE % self.data_path)
+            logging.info("Business gathering ended")
             return [BroadcastMessage(WINDOW_END_MESSAGE)], True
         else:
             self.logfile.write("%s\n" % json.dumps(item))
@@ -154,19 +162,21 @@ def notify_data_available(item):
         return [BroadcastMessage(WINDOW_END_MESSAGE)], False
     return [], False
 
+
 def empty_queue(item):
     if item == WINDOW_END_MESSAGE:
         return [], True
     return [], False
 
+
 def run_process(port, listen_backlog, rabbit_host, clients,
-                data_path = "data"):
+                data_path="data"):
     # simple fail if file is not accesible
     open(PATH_TO_SAVE_BUSINESSES % data_path, 'wb').close()
     socket_downloader = SocketDataDownloader(port, listen_backlog, clients, data_path)
     while True:
         if not os.path.exists(BUSINESSES_READY % data_path):
-            print("Consuming businesses")
+            logger.info("Consuming businesses")
             data_gatherer = DataGatherer(data_path)
             cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
                                              [BUSINESS_NOTIFY_END],
@@ -187,9 +197,29 @@ def run_process(port, listen_backlog, rabbit_host, clients,
         print("Stoping downloader service")
         os.remove(BUSINESSES_READY % data_path)
 
+
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
+    ack_process = AckProcess(ACK_LISTENING_PORT, os.getpid())
+    ack_process_aux = Process(target=ack_process.run)
+    ack_process_aux.start()
+    logger.info("Starting business downloader")
     port = int(os.getenv('PORT'))
     listen_backlog = int(os.getenv('LISTEN_BACKLOG'))
     rabbit_host = os.getenv('RABBIT_HOST')
     clients = int(os.getenv('CLIENTS'))
-    run_process(port, listen_backlog, rabbit_host, clients)
+    while True:
+        try:
+            run_process(port, listen_backlog, rabbit_host, clients)
+        except AMQPConnectionError:
+            sleep(2)
+            logger.info("Retrying connection to rabbit...")
+        except Exception as e:
+            logger.exception("Fatal error in consumer")
+            ack_process_aux.terminate()
+            raise e

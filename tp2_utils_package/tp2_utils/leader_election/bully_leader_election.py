@@ -1,3 +1,5 @@
+import logging
+
 from typing import List, Dict, Optional
 
 ELECTION_MESSAGE = "ELECTION"
@@ -55,7 +57,8 @@ class BullyLeaderElection:
         self._is_running_election = False
         self._current_leader = self._process_number
         return [self._generate_leader_message(destination_process) for destination_process in
-                self._other_processes_number if destination_process != self._process_number and destination_process < self._process_number]
+                self._other_processes_number if
+                destination_process != self._process_number and destination_process < self._process_number]
 
     def start_election(self) -> List[Dict]:
         """
@@ -83,6 +86,7 @@ class BullyLeaderElection:
                 self._current_leader = -1
             return self._generate_ok_message(message["origin_process_number"])
         elif message["message"] == LEADER_MESSAGE:
+            logging.info("Process {} is the new leader!".format(message["origin_process_number"]))
             self._current_leader = message["origin_process_number"]
             self._is_running_election = False
         else:

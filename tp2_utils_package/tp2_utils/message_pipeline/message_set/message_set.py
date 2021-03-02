@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from typing import NoReturn, Any, Optional
+
 from tp2_utils.interfaces.state_commiter import StateCommiter
 
 

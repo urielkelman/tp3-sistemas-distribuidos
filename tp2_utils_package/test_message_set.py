@@ -12,7 +12,7 @@ class TestDiskMessageSet(unittest.TestCase):
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
         os.mkdir('/tmp/message_set')
         self.message_set = DiskMessageSet('/tmp/message_set',
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
 
     def tearDown(self) -> None:
         shutil.rmtree('/tmp/message_set', ignore_errors=True)
@@ -62,7 +62,7 @@ class TestDiskMessageSet(unittest.TestCase):
             if random.random() < 0.05:
                 self.message_set.commit()
                 self.message_set = DiskMessageSet('/tmp/message_set',
-                                                  recover_state_on_init = True)
+                                                  recover_state_on_init=True)
             if random.random() > 0.5:
                 self.message_set.prepare(text.encode())
         random.seed(0)
@@ -71,7 +71,7 @@ class TestDiskMessageSet(unittest.TestCase):
             if random.random() < 0.1:
                 self.message_set.commit()
                 self.message_set = DiskMessageSet('/tmp/message_set',
-                                                  recover_state_on_init = True)
+                                                  recover_state_on_init=True)
             if random.random() > 0.5:
                 self.message_set.commit()
                 self.assertTrue(text.encode() in self.message_set)
@@ -123,7 +123,7 @@ class TestDiskMessageSet(unittest.TestCase):
         self.assertTrue(b"3" in self.message_set)
         self.message_set = DiskMessageSet('/tmp/message_set',
                                           commit_number=cm_1,
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
         self.assertFalse(b"3" in self.message_set)
@@ -151,7 +151,7 @@ class TestDiskMessageSet(unittest.TestCase):
         self.assertTrue(b"5" in self.message_set)
         self.message_set = DiskMessageSet('/tmp/message_set',
                                           commit_number=cm_1,
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
         self.assertFalse(b"3" in self.message_set)
@@ -184,7 +184,7 @@ class TestDiskMessageSet(unittest.TestCase):
         self.assertTrue(b"5" in self.message_set)
         self.message_set = DiskMessageSet('/tmp/message_set',
                                           commit_number=cm_1,
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
         self.assertFalse(b"3" in self.message_set)
@@ -222,7 +222,7 @@ class TestDiskMessageSet(unittest.TestCase):
         self.assertTrue(b"5" in self.message_set)
         self.message_set = DiskMessageSet('/tmp/message_set',
                                           commit_number=cm_1,
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
         self.assertFalse(b"3" in self.message_set)
@@ -252,7 +252,7 @@ class TestDiskMessageSet(unittest.TestCase):
         self.assertTrue(b"5" in self.message_set)
         self.message_set = DiskMessageSet('/tmp/message_set',
                                           commit_number=cm_1,
-                                          recover_state_on_init = True)
+                                          recover_state_on_init=True)
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
         self.assertFalse(b"3" in self.message_set)

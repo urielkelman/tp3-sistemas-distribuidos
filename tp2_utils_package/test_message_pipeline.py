@@ -1,6 +1,7 @@
-import unittest
-import shutil
 import os
+import random
+import shutil
+import unittest
 
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
 from tp2_utils.message_pipeline.operations.exceptions.unexistent_field import UnexistentField
@@ -17,7 +18,6 @@ from tp2_utils.message_pipeline.operations.rename import Rename
 from tp2_utils.message_pipeline.operations.top_n import TopN
 from tp2_utils.message_pipeline.operations.transform import Transform
 from tp2_utils.rabbit_utils.special_messages import BroadcastMessage
-import random
 
 
 class TestDiskMessagePipeline(unittest.TestCase):
@@ -400,7 +400,7 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                stop_at_window_end=True, data_path='/tmp/datapath')
         result_count = {}
         for i in range(527):
-            item = {"key": chr(ord('A')+random.randint(0,25))}
+            item = {"key": chr(ord('A') + random.randint(0, 25))}
             self.assertEqual(pipe.prepare(item), ([], False))
             if item["key"] != "Z":
                 if item["key"] not in result_count:
@@ -429,7 +429,7 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)],
                                stop_at_window_end=True, data_path='/tmp/datapath')
         for i in range(100):
-            item = {"key": chr(ord('A')+random.randint(0,25))}
+            item = {"key": chr(ord('A') + random.randint(0, 25))}
             self.assertEqual(pipe.prepare(item), ([], False))
             if item["key"] != "Z":
                 if item["key"] not in result_count:
@@ -440,8 +440,8 @@ class TestDiskMessagePipeline(unittest.TestCase):
                 pipe.commit()
         pipe.commit()
         self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
-                         ([{"key": k, "count": v} for k, v in result_count.items() if v>5]+
-                           [BroadcastMessage(WINDOW_END_MESSAGE)], True))
+                         ([{"key": k, "count": v} for k, v in result_count.items() if v > 5] +
+                          [BroadcastMessage(WINDOW_END_MESSAGE)], True))
         pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
                                 Operation.factory("GroupBy", group_by="key", aggregates=[
                                     GroupAggregate.factory("Count"),
@@ -450,7 +450,7 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                stop_at_window_end=True, data_path='/tmp/datapath')
         backup_result = result_count.copy()
         for i in range(100):
-            item = {"key": chr(ord('A')+random.randint(0,25))}
+            item = {"key": chr(ord('A') + random.randint(0, 25))}
             self.assertEqual(pipe.prepare(item), ([], False))
             if item["key"] != "Z":
                 if item["key"] not in result_count:
@@ -458,8 +458,8 @@ class TestDiskMessagePipeline(unittest.TestCase):
                 else:
                     result_count[item["key"]] += 1
         self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
-                         ([{"key": k, "count": v} for k, v in result_count.items() if v>5]+
-                           [BroadcastMessage(WINDOW_END_MESSAGE)], True))
+                         ([{"key": k, "count": v} for k, v in result_count.items() if v > 5] +
+                          [BroadcastMessage(WINDOW_END_MESSAGE)], True))
         pipe = MessagePipeline([Operation.factory("Filter", "key", lambda x: x != "Z"),
                                 Operation.factory("GroupBy", group_by="key", aggregates=[
                                     GroupAggregate.factory("Count"),
@@ -467,7 +467,5 @@ class TestDiskMessagePipeline(unittest.TestCase):
                                 Operation.factory("Filter", "value_sum", lambda x: x > 5)],
                                stop_at_window_end=True, data_path='/tmp/datapath')
         self.assertEqual(pipe.prepare(WINDOW_END_MESSAGE),
-                         ([{"key": k, "count": v} for k, v in backup_result.items() if v>5]+
-                           [BroadcastMessage(WINDOW_END_MESSAGE)], True))
-
-
+                         ([{"key": k, "count": v} for k, v in backup_result.items() if v > 5] +
+                          [BroadcastMessage(WINDOW_END_MESSAGE)], True))

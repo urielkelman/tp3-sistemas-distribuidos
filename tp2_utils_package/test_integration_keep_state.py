@@ -1,23 +1,23 @@
 import json
+import logging
 import os
+import random
 import shutil
+import signal
 import unittest
 from functools import partial
 from multiprocessing import Process, Pipe
+from time import sleep
 
+import numpy as np
 import pika
 
 from tp2_utils.message_pipeline.message_pipeline import WINDOW_END_MESSAGE, MessagePipeline
+from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
-from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.rabbit_utils.publisher_sharding import PublisherSharding
 from tp2_utils.rabbit_utils.rabbit_consumer_producer import RabbitQueueConsumerProducer
-import random
-from time import sleep
-import numpy as np
-import signal
-import logging
 
 logger = logging.getLogger('root')
 
@@ -30,19 +30,19 @@ OPERATION_ARGS = [([], []),
                   ([["Filter", "count", lambda x: x > 2]], [[]])
                   ]
 
-PIPELINE_C_ARGS = [({'ends_to_receive':1, 'ends_to_send':1, 'data_path': '/tmp/datapath1', 'signature': 'pipe1'},
+PIPELINE_C_ARGS = [({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath1', 'signature': 'pipe1'},
                     {'host': "localhost", 'consume_queue': 'pipeline_start',
                      'response_queues': ['pipelineC_step1'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set1'],
-                    ['key',3]),
+                    ['key', 3]),
                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath2', 'signature': 'pipe2'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard0',
                      'response_queues': ['pipelineC_step2'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
                     ['/tmp/message_set2'],
                     None),
-                    ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath3', 'signature': 'pipe3'},
+                   ({'ends_to_receive': 1, 'ends_to_send': 1, 'data_path': '/tmp/datapath3', 'signature': 'pipe3'},
                     {'host': "localhost", 'consume_queue': 'pipelineC_step1_shard1',
                      'response_queues': ['pipelineC_step2'],
                      'messages_to_group': DEFAULT_MESSAGES_TO_GROUP, 'logger': logger},
@@ -61,6 +61,7 @@ PIPELINE_C_ARGS = [({'ends_to_receive':1, 'ends_to_send':1, 'data_path': '/tmp/d
                     ['/tmp/message_set5'],
                     None)
                    ]
+
 
 class TestIntegrations(unittest.TestCase):
     """
@@ -142,7 +143,6 @@ class TestIntegrations(unittest.TestCase):
                                          publisher_sharding=p_sharding)
         return cp
 
-
     def _factory_and_start_process(self, ops_args, process_args):
         self._setup_start_process(self._factory_cp(ops_args, process_args),
                                   ops_args, process_args)
@@ -169,8 +169,8 @@ class TestIntegrations(unittest.TestCase):
             p = Process(target=cp)
             p.start()
             write_chaos.send(p.pid)
-            self.processes_to_join[i]=(p,self.processes_to_join[i][1], self.processes_to_join[i][2])
-            sleep(np.random.poisson(0.4, size=1)[0]+0.05)
+            self.processes_to_join[i] = (p, self.processes_to_join[i][1], self.processes_to_join[i][2])
+            sleep(np.random.poisson(0.4, size=1)[0] + 0.05)
 
     def test_without_chaos_monkey(self):
         random.seed(0)
@@ -179,9 +179,9 @@ class TestIntegrations(unittest.TestCase):
         for i in range(100):
             list_of_elements = []
             for j in range(1000):
-                element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                element = {'key': chr(ord('A') + random.randint(0, 25)), '_id': i * 1000 + j}
                 if element['key'] not in expected_count:
-                    expected_count[element['key']]=1
+                    expected_count[element['key']] = 1
                 else:
                     expected_count[element['key']] += 1
                 list_of_elements.append(element)
@@ -206,7 +206,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
-        self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
 
     def test_with_chaos_monkey(self):
         random.seed(0)
@@ -218,9 +218,9 @@ class TestIntegrations(unittest.TestCase):
         for i in range(1000):
             list_of_elements = []
             for j in range(1000):
-                element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                element = {'key': chr(ord('A') + random.randint(0, 25)), '_id': i * 1000 + j}
                 if element['key'] not in expected_count:
-                    expected_count[element['key']]=1
+                    expected_count[element['key']] = 1
                 else:
                     expected_count[element['key']] += 1
                 list_of_elements.append(element)
@@ -244,7 +244,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
-        self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
         self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
@@ -261,16 +261,16 @@ class TestIntegrations(unittest.TestCase):
             reppeated_messages = []
             for j in range(1000):
                 if not last_list or random.random() > 0.05:
-                    element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                    element = {'key': chr(ord('A') + random.randint(0, 25)), '_id': i * 1000 + j}
                     if element['key'] not in expected_count:
-                        expected_count[element['key']]=1
+                        expected_count[element['key']] = 1
                     else:
                         expected_count[element['key']] += 1
                     list_of_elements.append(element)
                 else:
                     reppeated_messages.append(random.choice(last_list))
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
-                                       body=json.dumps(list_of_elements+reppeated_messages))
+                                       body=json.dumps(list_of_elements + reppeated_messages))
             last_list = list_of_elements
         self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                    body=json.dumps({}))
@@ -290,7 +290,7 @@ class TestIntegrations(unittest.TestCase):
                     count_result[item['key']] = item['count']
             else:
                 count_result[resp['key']] = resp['count']
-        self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+        self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
         self.assertTrue(chaos_monkey_p.is_alive())
         chaos_monkey_p.terminate()
 
@@ -306,16 +306,16 @@ class TestIntegrations(unittest.TestCase):
                 list_of_elements = []
                 for j in range(100):
                     if not last_list or random.random() > 0.05:
-                        element = {'key': chr(ord('A') + random.randint(0,25)), '_id': i*1000+j}
+                        element = {'key': chr(ord('A') + random.randint(0, 25)), '_id': i * 1000 + j}
                         if element['key'] not in expected_count:
-                            expected_count[element['key']]=1
+                            expected_count[element['key']] = 1
                         else:
                             expected_count[element['key']] += 1
                         list_of_elements.append(element)
                     else:
                         reppeated_messages.append(random.choice(last_list))
                 self.channel.basic_publish(exchange='', routing_key='pipeline_start',
-                                           body=json.dumps(list_of_elements+reppeated_messages))
+                                           body=json.dumps(list_of_elements + reppeated_messages))
             self.channel.basic_publish(exchange='', routing_key='pipeline_start',
                                        body=json.dumps({}))
             consume_process = Process(target=self._read_process, args=(self.write_pipe,
@@ -334,7 +334,7 @@ class TestIntegrations(unittest.TestCase):
                         count_result[item['key']] = item['count']
                 else:
                     count_result[resp['key']] = resp['count']
-            self.assertEqual({k:v for k,v in  expected_count.items() if v>2}, count_result)
+            self.assertEqual({k: v for k, v in expected_count.items() if v > 2}, count_result)
             for q in self.queues_to_purge:
                 self.channel.queue_purge(q)
 
@@ -356,7 +356,7 @@ class TestIntegrations(unittest.TestCase):
 
     def tearDown(self) -> None:
         while self.recv_chaos.poll(0.1):
-            pid=self.recv_chaos.recv()
+            pid = self.recv_chaos.recv()
             try:
                 os.kill(pid, signal.SIGKILL)
             except Exception:
