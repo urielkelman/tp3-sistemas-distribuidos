@@ -66,14 +66,13 @@ if __name__ == "__main__":
                           'equal_to_5': equal_to_5,
                           'is_true': is_true,
                           'leq_than_1': leq_than_1})
-    logger = logging.getLogger('root')
+    logger = logging.getLogger()
     consumer = RabbitQueueConsumerProducer(host=config.host, consume_queue=config.consume_from,
                                            response_queues=config.produce_to,
                                            messages_to_group=config.messages_to_group,
                                            callable_commiter=config.message_pipeline, logger=logger,
                                            publisher_sharding=config.publisher_sharding)
-    continue_trying = True
-    while continue_trying:
+    while True:
         try:
             consumer()
         except AMQPConnectionError:
@@ -82,3 +81,4 @@ if __name__ == "__main__":
         except Exception as e:
             logger.exception("Fatal error in consumer")
             ack_process_aux.terminate()
+            raise e

@@ -30,7 +30,7 @@ PATH_TO_MESSAGE_SET = "%s/message_set"
 
 ACK_LISTENING_PORT = 8000
 
-logger = logging.getLogger("root")
+logger = logging.getLogger()
 
 
 def wait_for_file_ready(data_path, item):
@@ -50,8 +50,6 @@ def add_location_to_businesses(business_locations, data_path, item):
 
 class BusinessJoiner(StateCommiter):
     def __init__(self, func: Callable, idempotency_set, data_path):
-        """
-        """
         super().__init__()
         self.func = func
         self.idempotency_set = idempotency_set
@@ -129,8 +127,6 @@ def run_process(downloader_host, downloader_port,
                 join_from_queue, output_joined_queue,
                 rabbit_host,
                 data_path="data"):
-    if not os.path.exists(PATH_TO_MESSAGE_SET % data_path):
-        os.mkdir(PATH_TO_MESSAGE_SET % data_path)
     while True:
         if not os.path.exists(BUSINESSES_READY_PATH % data_path):
             logger.info("Waiting for downloader to be ready")
@@ -166,10 +162,8 @@ def run_process(downloader_host, downloader_port,
         if not os.path.exists(JOINING_DONE_PATH % data_path):
             with open(PATH_TO_SAVE_BUSINESSES % data_path, "rb") as business_file:
                 business_locations = pickle.load(business_file)
-            idempotency_set = DiskMessageSetByLastCommit(PATH_TO_MESSAGE_SET % data_path)
-            joiner_state_commiter = BusinessJoiner(
-                partial(add_location_to_businesses, business_locations, data_path),
-                idempotency_set, data_path)
+            joiner_state_commiter = DummyStateCommiter(
+                partial(add_location_to_businesses, business_locations, data_path))
             cp = RabbitQueueConsumerProducer(rabbit_host, join_from_queue,
                                              [output_joined_queue],
                                              joiner_state_commiter,
@@ -191,21 +185,30 @@ def run_process(downloader_host, downloader_port,
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
     ack_process = AckProcess(ACK_LISTENING_PORT, os.getpid())
     ack_process_aux = Process(target=ack_process.run)
     ack_process_aux.start()
+    logger.info("Starting business joiner")
     downloader_host = os.getenv('DOWNLOADER_HOST')
     downloader_port = int(os.getenv('DOWNLOADER_PORT'))
     join_from_queue = os.getenv('JOIN_FROM_QUEUE')
     output_joined_queue = os.getenv('OUTPUT_JOINED_QUEUE')
     rabbit_host = os.getenv('RABBIT_HOST')
-    try:
-        logger.info("Running business joiner service")
-        run_process(downloader_host, downloader_port, join_from_queue,
-                    output_joined_queue, rabbit_host)
-    except AMQPConnectionError:
-        sleep(2)
-        logger.info("Retrying connection to rabbit...")
-    except Exception as e:
-        logger.exception("Fatal error in consumer")
-        ack_process_aux.terminate()
+    while True:
+        try:
+            logger.info("Running business joiner service")
+            run_process(downloader_host, downloader_port, join_from_queue,
+                        output_joined_queue, rabbit_host)
+        except AMQPConnectionError:
+            sleep(2)
+            logger.info("Retrying connection to rabbit...")
+        except Exception as e:
+            logger.exception("Fatal error in consumer")
+            ack_process_aux.terminate()
+            raise e
