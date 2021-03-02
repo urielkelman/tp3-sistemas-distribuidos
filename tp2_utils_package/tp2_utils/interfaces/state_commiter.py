@@ -43,4 +43,7 @@ class StateCommiter:
 
     @abstractmethod
     def commit_done_cleanup(self):
+        """
+        Cleans up after commit
+        """
         pass

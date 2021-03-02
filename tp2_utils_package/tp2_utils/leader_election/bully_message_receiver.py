@@ -3,8 +3,8 @@ import socket
 from multiprocessing import Lock, Barrier
 from typing import Dict
 
-from tp2_utils.data_transferin_utils.socket_data_receiver import SocketDataReceiver
-from tp2_utils.data_transferin_utils.socket_data_sender import SocketDataSender
+from tp2_utils.data_transfering_utils.socket_data_receiver import SocketDataReceiver
+from tp2_utils.data_transfering_utils.socket_data_sender import SocketDataSender
 from tp2_utils.leader_election.bully_leader_election import BullyLeaderElection
 from tp2_utils.leader_election.connection import Connection
 from tp2_utils.leader_election.utils import open_sending_socket_connection

@@ -183,8 +183,8 @@ class MessagePipeline(StateCommiter):
             return [], False
         if message_is_end(item):
             self.ends_received += 1
-            if self.idempotency_set:
-                self.idempotency_set.prepare((item if not message_is_end(item) else WINDOW_END_MESSAGE))
+            if self.idempotency_set and item:
+                self.idempotency_set.prepare(item)
             item = WINDOW_END_MESSAGE
             if self.ends_received < self.ends_to_receive:
                 return [], False
