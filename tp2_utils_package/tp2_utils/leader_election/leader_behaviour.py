@@ -28,7 +28,6 @@ class LeaderBehaviour(NodeBehaviour):
 
     def _get_node_information(self, worker_node) -> Dict:
         worker_node_tree = self._workers_config["services"][worker_node]
-        logging.info(worker_node_tree)
         return {
             "name": worker_node_tree["container_name"],
             "image": worker_node_tree["image"],
@@ -41,7 +40,6 @@ class LeaderBehaviour(NodeBehaviour):
 
     def _restart_node(self, worker_node):
         worker_node_information = self._get_node_information(worker_node)
-        logging.info(worker_node_information)
         running_container_names = [volume.name for volume in self._docker_client.containers.list()]
         # We have to do the following check because the node could be restarted recently and not listening yet.
         if worker_node not in running_container_names:
@@ -61,13 +59,11 @@ class LeaderBehaviour(NodeBehaviour):
                 if "monitor" not in service and "rabbit" not in service]
 
     def _check_nodes_up(self):
-        logging.info(self._get_worker_nodes())
         for worker_node in self._get_worker_nodes():
             connection = open_sending_socket_connection(worker_node, DEFAULT_ACK_PORT)
             if connection.socket is not None:
                 try:
                     SocketDataReceiver.receive_fixed_size(connection.socket, len(ACK_MESSAGE))
-                    logging.info("Received ACK from node {}".format(worker_node))
                     connection.socket.close()
                 except (OSError, TimeoutError):
                     logging.exception("An exception happened when trying to get ACK from node: {}".format(worker_node))
@@ -76,6 +72,5 @@ class LeaderBehaviour(NodeBehaviour):
                 self._restart_node(worker_node)
 
     def execute_tasks(self):
-        logging.info("Execute leader tasks.")
         self._check_connections()
         self._check_nodes_up()

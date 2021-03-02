@@ -1,3 +1,5 @@
+import logging
+
 from typing import List, Dict, Optional
 
 ELECTION_MESSAGE = "ELECTION"
@@ -84,6 +86,7 @@ class BullyLeaderElection:
                 self._current_leader = -1
             return self._generate_ok_message(message["origin_process_number"])
         elif message["message"] == LEADER_MESSAGE:
+            logging.info("Process {} is the new leader!".format(message["origin_process_number"]))
             self._current_leader = message["origin_process_number"]
             self._is_running_election = False
         else:
