@@ -34,7 +34,6 @@ class NodeBehaviour:
         """
         bully_leader_election = self._bully_leader_election_dict['bully']
         leader_id = bully_leader_election.get_current_leader()
-        logging.info("Actual leader id: " + str(leader_id))
         hosts_ids = bully_leader_election.get_hosts_ids()
         for host_id in hosts_ids:
             if host_id != bully_leader_election.get_id():
