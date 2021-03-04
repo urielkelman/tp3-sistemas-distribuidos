@@ -3,7 +3,7 @@ rabbit_params:
   consume_from: yelp_reviews_funny_counter_consumer
   produce_to:
     - yelp_business_funny_reviews_count
-  messages_to_group: 100
+  messages_to_group: 1000
 
 group_aggregates:
   - name: ReviewCount

@@ -51,15 +51,15 @@ class TestDiskMessageSetByLastCommit(unittest.TestCase):
     def test_simple_commit_rollback(self):
         self.assertFalse(b"1" in self.message_set)
         self.assertFalse(b"2" in self.message_set)
+        self.assertFalse(b"3" in self.message_set)
         self.message_set.prepare(b"1")
         self.message_set.prepare(b"2")
         cm_1 = self.message_set.commit()
         self.assertTrue(b"1" in self.message_set)
         self.assertTrue(b"2" in self.message_set)
+        self.assertFalse(b"3" in self.message_set)
         self.message_set.prepare(b"3")
         self.message_set.commit()
-        self.assertFalse(b"1" in self.message_set)
-        self.assertFalse(b"2" in self.message_set)
         self.assertTrue(b"3" in self.message_set)
         self.message_set = DiskMessageSetByLastCommit('/tmp/message_set', commit_number=cm_1,
                                                       recover_state_on_init=True)

@@ -4,6 +4,7 @@ from yaml import Loader
 from yaml import load
 
 from tp2_utils.message_pipeline.message_pipeline import MessagePipeline
+from tp2_utils.message_pipeline.message_set.disk_message_set import DiskMessageSet
 from tp2_utils.message_pipeline.message_set.disk_message_set_by_commit import DiskMessageSetByLastCommit
 from tp2_utils.message_pipeline.operations.group_aggregates.group_aggregate import GroupAggregate
 from tp2_utils.message_pipeline.operations.operation import Operation
@@ -40,7 +41,10 @@ def load_config(config_path: str,
     publisher_sharding = None
     message_set = None
     if 'message_set_params' in config_dict:
-        message_set = DiskMessageSetByLastCommit(**config_dict['message_set_params'])
+        if 'message_set_kind' in config_dict and config_dict['message_set_kind'] == 'DiskMessageSet':
+            message_set = DiskMessageSet(**config_dict['message_set_params'])
+        else:
+            message_set = DiskMessageSetByLastCommit(**config_dict['message_set_params'])
     if 'publisher_sharding' in config_dict:
         publisher_sharding = PublisherSharding(**config_dict['publisher_sharding'])
     for group_aggregate in config_dict['group_aggregates']:

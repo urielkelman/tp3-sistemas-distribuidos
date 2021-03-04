@@ -1,6 +1,5 @@
-import socket
 import logging
-
+import socket
 from time import sleep
 
 from tp2_utils.leader_election.connection import Connection

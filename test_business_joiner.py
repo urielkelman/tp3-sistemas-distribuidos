@@ -104,7 +104,7 @@ class TestBusinessJoiner(unittest.TestCase):
         self._setup_start_process(partial(run_joiner,
                                           "localhost", TestBusinessJoiner.PORT_TO_USE,
                                           "queue_to_join", "pipeline_result", "localhost",
-                                          '/tmp/joiner_data'))
+                                          'joiner_signature', '/tmp/joiner_data'))
         for i in range(QUANTITY_FOR_TESTING):
             element = {"city": "Ciudad%d" % i, 'business_id': i}
             self.channel.basic_publish(exchange='', routing_key='yelp_businesses_news',

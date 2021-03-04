@@ -233,8 +233,8 @@ services:
     depends_on:
       - rabbitmq
 
-  business_joiner_service:
-    container_name: business_joiner_service
+  business_joiner_service1:
+    container_name: business_joiner_service1
     image: business_joiner_service:latest
     entrypoint: python3 /__main__.py
     environment:
@@ -243,10 +243,11 @@ services:
       - JOIN_FROM_QUEUE=yelp_business_funny_reviews_count
       - OUTPUT_JOINED_QUEUE=yelp_business_funny_reviews_city_count_consumer
       - RABBIT_HOST=rabbit
+      - SIGNATURE=joiner1
     networks:
       - tp2_net
     volumes:
-      - joiner_service_data:/data
+      - joiner1_service_data:/data
     depends_on:
       - rabbitmq
 
@@ -258,7 +259,8 @@ volumes:
       o: bind
       type: none
       device: ./configs
-  joiner_service_data:
+  joiner1_service_data:
+  joiner2_service_data:
   download_service_data:
   user_stats_calculator_shard1_message_pipeline:
   user_stats_calculator_shard1_message_set:

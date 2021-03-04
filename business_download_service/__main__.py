@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pickle
+import re
 import shutil
 import socket
 from multiprocessing import Process
@@ -25,6 +26,7 @@ PATH_TO_SAVE_LOGFILE = '%s/logfile'
 BUSINESSES_READY = '%s/BUSINESSES_READY'
 SAFE_BACKUP_END = ".copy"
 ACK_LISTENING_PORT = 8000
+END_REGEX_MATCH = "END_(.+)"
 
 logger = logging.getLogger()
 
@@ -60,13 +62,13 @@ class SocketDataDownloader():
         self.listen_backlog = listen_backlog
         self.clients_to_end = clients
         if os.path.exists(PATH_TO_SAVE_CLIENTS_ENDED % data_path):
-            success, clients_ended = self._safe_pickle_load(PATH_TO_SAVE_CLIENTS_ENDED % data_path)
+            success, data = self._safe_pickle_load(PATH_TO_SAVE_CLIENTS_ENDED % data_path)
             if success:
-                self.clients_ended = clients_ended
+                self.clients_ended, self.ends_seen = data
             else:
-                self.clients_ended = 0
+                self.clients_ended, self.ends_seen = 0, set()
         else:
-            self.clients_ended = 0
+            self.clients_ended, self.ends_seen = 0, set()
         self.data_path = data_path
         self.process_list = []
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -77,7 +79,9 @@ class SocketDataDownloader():
         while self.clients_ended < self.clients_to_end:
             client_sock = self.__accept_new_connection()
             self.__handle_client_connection(client_sock)
-        self.clients_ended = 0
+        self.clients_ended, self.ends_seen = 0, set()
+        if os.path.exists(PATH_TO_SAVE_CLIENTS_ENDED % self.data_path):
+            os.remove(PATH_TO_SAVE_CLIENTS_ENDED % self.data_path)
 
     def close(self):
         self._server_socket.close()
@@ -92,9 +96,12 @@ class SocketDataDownloader():
         socket_transferer = BlockingSocketTransferer(client_sock)
         try:
             msg = socket_transferer.receive_plain_text()
-            if msg == "END":
-                self.clients_ended += 1
-                self._safe_pickle_dump(self.clients_ended, PATH_TO_SAVE_CLIENTS_ENDED % self.data_path)
+            if re.match(END_REGEX_MATCH, msg):
+                if msg not in self.ends_seen:
+                    self.clients_ended += 1
+                    self.ends_seen.add(msg)
+                    self._safe_pickle_dump((self.clients_ended, self.ends_seen),
+                                           PATH_TO_SAVE_CLIENTS_ENDED % self.data_path)
                 socket_transferer.send_plain_text("REGISTERED")
                 socket_transferer.close()
                 return
@@ -121,10 +128,11 @@ class SocketDataDownloader():
 
 
 class DataGatherer:
-    def __init__(self, data_path):
+    def __init__(self, data_path, clients):
         self.business_locations = {}
         self.logfile = None
         self.data_path = data_path
+        self.clients = clients
         self._restore_and_open_logfile()
 
     def _restore_and_open_logfile(self):
@@ -149,7 +157,7 @@ class DataGatherer:
             self.logfile.close()
             os.remove(PATH_TO_SAVE_LOGFILE % self.data_path)
             logging.info("Business gathering ended")
-            return [BroadcastMessage(WINDOW_END_MESSAGE)], True
+            return [BroadcastMessage(WINDOW_END_MESSAGE) for _ in range(self.clients)], True
         else:
             self.logfile.write("%s\n" % json.dumps(item))
             self.logfile.flush()
@@ -177,7 +185,7 @@ def run_process(port, listen_backlog, rabbit_host, clients,
     while True:
         if not os.path.exists(BUSINESSES_READY % data_path):
             logger.info("Consuming businesses")
-            data_gatherer = DataGatherer(data_path)
+            data_gatherer = DataGatherer(data_path, clients)
             cp = RabbitQueueConsumerProducer(rabbit_host, BUSINESSES_QUEUE,
                                              [BUSINESS_NOTIFY_END],
                                              DummyStateCommiter(data_gatherer.gather_business_locations),
@@ -189,13 +197,15 @@ def run_process(port, listen_backlog, rabbit_host, clients,
                 raise e
 
         try:
-            print("Starting download service")
+            logger.info("Starting download service")
             socket_downloader.start_download_listening()
         except Exception as e:
             logger.exception("Error accepting connections for downloading")
             raise e
-        print("Stoping downloader service")
+        logger.info("Stoping downloader service")
         os.remove(BUSINESSES_READY % data_path)
+        if os.path.exists(PATH_TO_SAVE_CLIENTS_ENDED % data_path):
+            os.remove(PATH_TO_SAVE_CLIENTS_ENDED % data_path)
 
 
 if __name__ == "__main__":

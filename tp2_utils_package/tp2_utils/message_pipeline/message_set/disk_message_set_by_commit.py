@@ -14,6 +14,8 @@ from .message_set import MessageSet
 
 BUCKET_PATH = "%s/%d"
 SAFE_BACKUP_END = ".copy"
+# By design we just need the last commit but just in case we allow weaker storage for previous commits
+RAM_MESSAGES_FROM_PREVIOUS_COMMITS = 25000
 
 
 class DiskMessageSetByLastCommit(MessageSet):
@@ -101,10 +103,13 @@ class DiskMessageSetByLastCommit(MessageSet):
         :return: a commit number
         """
         rn = self.commit_number
-        self._safe_pickle_dump(set(self.prepare_buffer), BUCKET_PATH % (self.set_data_path, rn))
+        if len(self.last_item_set) <= RAM_MESSAGES_FROM_PREVIOUS_COMMITS:
+            self.last_item_set = self.last_item_set.union(set(self.prepare_buffer))
+        else:
+            self.last_item_set = set(self.prepare_buffer)
+        self._safe_pickle_dump(self.last_item_set, BUCKET_PATH % (self.set_data_path, rn))
         if os.path.exists(BUCKET_PATH % (self.set_data_path, rn - 5)):
             os.remove(BUCKET_PATH % (self.set_data_path, rn - 5))
-        self.last_item_set = set(self.prepare_buffer)
         self.prepare_buffer = []
         self.commit_number += 1
         return rn
